@@ -19,9 +19,9 @@ export const TopBar = () => {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const getNotificationsByRole = (): Notification[] => {
-    switch (user?.role) {
-      case 'student':
-      case 'teacher':
+    switch (user?.rol) {  // ✅ "rol" en vez de "role"
+      case 'estudiante':
+      case 'docente':
         return [
           {
             id: '1',
@@ -61,7 +61,7 @@ export const TopBar = () => {
           },
         ];
 
-      case 'librarian':
+      case 'bibliotecario':
         return [
           {
             id: '1',
@@ -83,7 +83,7 @@ export const TopBar = () => {
           },
         ];
 
-      case 'admin':
+      case 'administrativo':
         return [
           {
             id: '1',
@@ -128,11 +128,9 @@ export const TopBar = () => {
         setShowNotifications(false);
       }
     };
-
     if (showNotifications) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -140,24 +138,20 @@ export const TopBar = () => {
 
   const getNotificationBgColor = (type: string) => {
     switch (type) {
-      case 'warning':
-        return 'bg-yellow-50 border-yellow-200';
-      case 'success':
-        return 'bg-green-50 border-green-200';
-      case 'error':
-        return 'bg-red-50 border-red-200';
-      case 'info':
-        return 'bg-blue-50 border-blue-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
+      case 'warning': return 'bg-yellow-50 border-yellow-200';
+      case 'success': return 'bg-green-50 border-green-200';
+      case 'error': return 'bg-red-50 border-red-200';
+      case 'info': return 'bg-blue-50 border-blue-200';
+      default: return 'bg-gray-50 border-gray-200';
     }
   };
 
   return (
     <div className="h-16 bg-white border-b border-gray-200 fixed top-0 right-0 left-64 z-10 flex items-center justify-between px-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-800">Bienvenido, {user?.name}</h2>
-        <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
+        {/* ✅ "nombreCompleto" en vez de "name", "rol" en vez de "role" */}
+        <h2 className="text-xl font-semibold text-gray-800">Bienvenido, {user?.nombreCompleto}</h2>
+        <p className="text-sm text-gray-500 capitalize">{user?.rol}</p>
       </div>
 
       <div className="flex items-center gap-4">
@@ -200,9 +194,7 @@ export const TopBar = () => {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-1">
-                            <h4 className="font-medium text-sm text-gray-900">
-                              {notification.title}
-                            </h4>
+                            <h4 className="font-medium text-sm text-gray-900">{notification.title}</h4>
                             {!notification.isRead && (
                               <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
                             )}
@@ -234,7 +226,8 @@ export const TopBar = () => {
 
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
           <User size={20} className="text-gray-600" />
-          <span className="text-sm text-gray-700">{user?.email}</span>
+          {/* ✅ "correoInstitucional" en vez de "email" */}
+          <span className="text-sm text-gray-700">{user?.correoInstitucional}</span>
         </div>
       </div>
     </div>

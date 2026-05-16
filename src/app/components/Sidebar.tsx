@@ -8,9 +8,9 @@ export const Sidebar = () => {
   const { user, logout } = useAuth();
 
   const getMenuItemsByRole = () => {
-    switch (user?.role) {
-      case 'student':
-      case 'teacher':
+    switch (user?.rol) {  // ✅ "rol" en vez de "role"
+      case 'estudiante':
+      case 'docente':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: BookOpen, label: 'Biblioteca', path: '/library' },
@@ -21,7 +21,7 @@ export const Sidebar = () => {
           { icon: DollarSign, label: 'Mis Multas', path: '/my-fines' },
         ];
 
-      case 'librarian':
+      case 'bibliotecario':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: Library, label: 'Gestión de Libros', path: '/book-management' },
@@ -30,7 +30,7 @@ export const Sidebar = () => {
           { icon: Users, label: 'Usuarios', path: '/users' },
         ];
 
-      case 'admin':
+      case 'administrativo':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },

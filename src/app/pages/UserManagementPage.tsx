@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -11,36 +11,79 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../../services/api";
 
 export const UserManagementPage = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: '' });
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newUser, setNewUser] = useState({
+    nombreCompleto: '',
+    correo: '',
+    documentoIdentidad: '',
+    password: '',
+    rol: '',
+  });
 
-  const users = [
-    { id: '1', name: 'Juan Pérez', email: 'juan@edutech.edu', role: 'Estudiante', status: 'Activo' },
-    { id: '2', name: 'Prof. María González', email: 'maria@edutech.edu', role: 'Profesor', status: 'Activo' },
-    { id: '3', name: 'Ana Martínez', email: 'ana@edutech.edu', role: 'Bibliotecario', status: 'Activo' },
-    { id: '4', name: 'Carlos Wilson', email: 'carlos@edutech.edu', role: 'Estudiante', status: 'Inactivo' },
-  ];
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("accessToken");
+      console.log("Token:", token);
+      const data = await api.getUsers();
+      setUsers(data);
+    } catch (error: any) {
+      console.log("Error completo:", error);
+      toast.error(error.message || "Error al cargar usuarios");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.correoInstitucional.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.role) {
+  const handleCreateUser = async () => {
+    if (!newUser.nombreCompleto || !newUser.correo || !newUser.rol || !newUser.password || !newUser.documentoIdentidad) {
       toast.error('Por favor completa todos los campos');
       return;
     }
-    toast.success(`Usuario ${newUser.name} creado exitosamente`);
-    setShowCreateDialog(false);
-    setNewUser({ name: '', email: '', role: '' });
+    try {
+      await api.createUser(newUser);
+      toast.success(`Usuario ${newUser.nombreCompleto} creado exitosamente`);
+      setShowCreateDialog(false);
+      setNewUser({ nombreCompleto: '', correo: '', documentoIdentidad: '', password: '', rol: '' });
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error.message || "Error al crear usuario");
+    }
   };
 
-  const handleDeactivate = (user: any) => {
-    toast.success(`El usuario ${user.name} ha sido desactivado`);
+  const handleDeactivate = async (user: any) => {
+    try {
+      await api.updateUserStatus(user.id, 'inactivo');
+      toast.success(`${user.nombreCompleto} ha sido desactivado`);
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error.message || "Error al desactivar usuario");
+    }
+  };
+
+  const getRolColor = (rol: string) => {
+    switch (rol) {
+      case 'estudiante': return 'bg-blue-100 text-blue-800';
+      case 'docente': return 'bg-green-100 text-green-800';
+      case 'bibliotecario': return 'bg-purple-100 text-purple-800';
+      case 'administrativo': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
@@ -69,43 +112,46 @@ export const UserManagementPage = () => {
               />
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Correo Electrónico</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={user.status === 'Activo' ? 'bg-green-500' : 'bg-gray-500'}>
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Editar</Button>
-                        {user.status === 'Activo' && (
-                          <Button size="sm" variant="destructive" onClick={() => handleDeactivate(user)}>
-                            Desactivar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <p className="text-center text-gray-500 py-8">Cargando usuarios...</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Correo Electrónico</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.nombreCompleto}</TableCell>
+                      <TableCell>{user.correoInstitucional}</TableCell>
+                      <TableCell>
+                        <Badge className={getRolColor(user.rol)}>{user.rol}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.estado === 'activo' ? 'bg-green-500' : 'bg-gray-500'}>
+                          {user.estado}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {user.estado === 'activo' && (
+                            <Button size="sm" variant="destructive" onClick={() => handleDeactivate(user)}>
+                              Desactivar
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -113,52 +159,61 @@ export const UserManagementPage = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-              <DialogDescription>
-                Agrega un nuevo usuario al sistema
-              </DialogDescription>
+              <DialogDescription>Agrega un nuevo usuario al sistema</DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div>
-                <Label htmlFor="name">Nombre Completo</Label>
+                <Label>Nombre Completo</Label>
                 <Input
-                  id="name"
                   placeholder="Ingresa el nombre completo"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  value={newUser.nombreCompleto}
+                  onChange={(e) => setNewUser({ ...newUser, nombreCompleto: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="email">Correo Electrónico</Label>
+                <Label>Documento de Identidad</Label>
                 <Input
-                  id="email"
+                  placeholder="Número de documento"
+                  value={newUser.documentoIdentidad}
+                  onChange={(e) => setNewUser({ ...newUser, documentoIdentidad: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Correo Electrónico</Label>
+                <Input
                   type="email"
                   placeholder="usuario@edutech.edu"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  value={newUser.correo}
+                  onChange={(e) => setNewUser({ ...newUser, correo: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="role">Rol</Label>
-                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                <Label>Contraseña</Label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Rol</Label>
+                <Select value={newUser.rol} onValueChange={(value) => setNewUser({ ...newUser, rol: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Estudiante">Estudiante</SelectItem>
-                    <SelectItem value="Profesor">Profesor</SelectItem>
-                    <SelectItem value="Bibliotecario">Bibliotecario</SelectItem>
-                    <SelectItem value="Administrador">Administrador</SelectItem>
+                    <SelectItem value="estudiante">Estudiante</SelectItem>
+                    <SelectItem value="docente">Docente</SelectItem>
+                    <SelectItem value="bibliotecario">Bibliotecario</SelectItem>
+                    <SelectItem value="administrativo">Administrativo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateUser} className="bg-blue-900 hover:bg-blue-800">
-                Crear Usuario
-              </Button>
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
+              <Button onClick={handleCreateUser} className="bg-blue-900 hover:bg-blue-800">Crear Usuario</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
