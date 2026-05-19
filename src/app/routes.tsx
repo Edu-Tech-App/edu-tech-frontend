@@ -1,7 +1,7 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { RootLayout } from "./layouts/RootLayout";
 import { LoginPage } from "./pages/LoginPage";
-import { RoleSelectionPage } from "./pages/RoleSelectionPage";
+// ✅ RoleSelectionPage eliminado — ya no se usa
 import { DashboardPage } from "./pages/DashboardPage";
 import { LibraryCatalogPage } from "./pages/LibraryCatalogPage";
 import { BookDetailPage } from "./pages/BookDetailPage";
@@ -21,31 +21,37 @@ import { RoomsPage } from "./pages/RoomsPage";
 import { MyRoomReservationsPage } from "./pages/MyRoomReservationsPage";
 import { RoomReservationsManagementPage } from "./pages/RoomReservationsManagementPage";
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: RootLayout,
     children: [
       { index: true, Component: LoginPage },
-      { path: "role-selection", Component: RoleSelectionPage },
-      { path: "dashboard", Component: DashboardPage },
-      { path: "library", Component: LibraryCatalogPage },
-      { path: "library/book/:id", Component: BookDetailPage },
-      { path: "library/loans", Component: LoanManagementPage },
-      { path: "fines", Component: FinesPage },
-      { path: "my-fines", Component: MyFinesPage },
-      { path: "library/rooms", Component: RoomReservationPage },
-      { path: "subjects", Component: SubjectsPage },
-      { path: "subjects/:id", Component: SubjectDetailPage },
-      { path: "reservations", Component: ReservationsPage },
-      { path: "users", Component: UserManagementPage },
-      { path: "book-management", Component: BookManagementPage },
-      { path: "active-loans", Component: ActiveLoansPage },
-      { path: "statistics", Component: StatisticsPage },
-      { path: "my-loans", Component: MyLoansPage },
-      { path: "rooms", Component: RoomsPage },
-      { path: "my-room-reservations", Component: MyRoomReservationsPage },
-      { path: "room-reservations-management", Component: RoomReservationsManagementPage },
+      // ✅ role-selection eliminado
+      { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
+      { path: "library", element: <ProtectedRoute><LibraryCatalogPage /></ProtectedRoute> },
+      { path: "library/book/:id", element: <ProtectedRoute><BookDetailPage /></ProtectedRoute> },
+      { path: "library/loans", element: <ProtectedRoute><LoanManagementPage /></ProtectedRoute> },
+      { path: "fines", element: <ProtectedRoute><FinesPage /></ProtectedRoute> },
+      { path: "my-fines", element: <ProtectedRoute><MyFinesPage /></ProtectedRoute> },
+      { path: "library/rooms", element: <ProtectedRoute><RoomReservationPage /></ProtectedRoute> },
+      { path: "subjects", element: <ProtectedRoute><SubjectsPage /></ProtectedRoute> },
+      { path: "subjects/:id", element: <ProtectedRoute><SubjectDetailPage /></ProtectedRoute> },
+      { path: "reservations", element: <ProtectedRoute><ReservationsPage /></ProtectedRoute> },
+      { path: "users", element: <ProtectedRoute><UserManagementPage /></ProtectedRoute> },
+      { path: "book-management", element: <ProtectedRoute><BookManagementPage /></ProtectedRoute> },
+      { path: "active-loans", element: <ProtectedRoute><ActiveLoansPage /></ProtectedRoute> },
+      { path: "statistics", element: <ProtectedRoute><StatisticsPage /></ProtectedRoute> },
+      { path: "my-loans", element: <ProtectedRoute><MyLoansPage /></ProtectedRoute> },
+      { path: "rooms", element: <ProtectedRoute><RoomsPage /></ProtectedRoute> },
+      { path: "my-room-reservations", element: <ProtectedRoute><MyRoomReservationsPage /></ProtectedRoute> },
+      { path: "room-reservations-management", element: <ProtectedRoute><RoomReservationsManagementPage /></ProtectedRoute> },
     ],
   },
 ]);

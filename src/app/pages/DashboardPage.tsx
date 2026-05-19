@@ -10,17 +10,17 @@ export const DashboardPage = () => {
   const { user } = useAuth();
 
   const renderDashboard = () => {
-    switch (user?.role) {
-      case 'student':
+    switch (user?.rol) {  // ✅ "rol" en vez de "role"
+      case 'estudiante':
         return <StudentDashboard />;
-      case 'teacher':
+      case 'docente':
         return <TeacherDashboard />;
-      case 'librarian':
+      case 'bibliotecario':
         return <LibrarianDashboard />;
-      case 'admin':
+      case 'administrativo':
         return <AdminDashboard />;
       default:
-        return null;
+        return <div className="p-8 text-gray-500">Rol no reconocido: {user?.rol}</div>;
     }
   };
 

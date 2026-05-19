@@ -1,19 +1,18 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { api } from '../../services/api';
 
-export type UserRole = 'student' | 'teacher' | 'librarian' | 'admin';
+export type UserRole = 'estudiante' | 'docente' | 'bibliotecario' | 'administrativo';
 
 interface User {
-  email: string;
-  name: string;
-  role: UserRole;
-  id: string;
-  hasPendingFines?: boolean;
+  id: number;
+  nombreCompleto: string;
+  correoInstitucional: string;
+  rol: UserRole;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  selectRole: (role: UserRole) => void;
+  login: (correo: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -22,40 +21,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = (email: string, password: string) => {
-    if (email && password) {
-      setIsAuthenticated(true);
-      return true;
+  // ✅ Al recargar la página, recupera el usuario del localStorage
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
-    return false;
-  };
+  }, []);
 
-  const selectRole = (role: UserRole) => {
-    const names = {
-      student: 'Estudiante Angela Aguilar',
-      teacher: 'Profesor Cristian Nodal',
-      librarian: 'Bibliotecario Cazzu De Nodal',
-      admin: 'Admin Camila Arteaga'
-    };
+  const login = async (correo: string, password: string) => {
+    // ✅ Llama al backend real
+    const data = await api.login({ correo, password });
 
-    setUser({
-      email: 'user@edutech.edu',
-      name: names[role],
-      role,
-      id: `${role}-001`,
-      hasPendingFines: role === 'student' ? false : undefined
-    });
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    setUser(data.user);
   };
 
   const logout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     setUser(null);
-    setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, selectRole, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      logout,
+      isAuthenticated: !!user,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -63,8 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
