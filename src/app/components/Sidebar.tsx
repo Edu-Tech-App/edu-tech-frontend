@@ -24,9 +24,9 @@ export const Sidebar = () => {
       case 'bibliotecario':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
-          { icon: Library, label: 'Gestión de Libros', path: '/book-management' },
+          { icon: Library, label: 'Libros', path: '/book-management' },
           { icon: BookMarked, label: 'Préstamos Activos', path: '/active-loans' },
-          { icon: CalendarCheck, label: 'Gestión de Reservas', path: '/room-reservations-management' },
+          { icon: CalendarCheck, label: 'Reservas y Préstamos', path: '/reservations' },
           { icon: Users, label: 'Usuarios', path: '/users' },
         ];
 
@@ -34,8 +34,9 @@ export const Sidebar = () => {
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
-          { icon: Library, label: 'Gestión de Libros', path: '/book-management' },
-          { icon: CalendarCheck, label: 'Gestión de Reservas', path: '/room-reservations-management' },
+          { icon: Library, label: 'Libros', path: '/book-management' },
+          { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
+          { icon: CalendarCheck, label: 'Reservas y Préstamos', path: '/reservations' },
           { icon: Users, label: 'Usuarios', path: '/users' },
           { icon: GraduationCap, label: 'Materias', path: '/subjects' },
           { icon: DollarSign, label: 'Multas', path: '/fines' },
@@ -58,8 +59,15 @@ export const Sidebar = () => {
   return (
     <div className="w-64 bg-blue-900 text-white h-screen fixed left-0 top-0 flex flex-col">
       <div className="p-6 border-b border-blue-800">
-        <h1 className="text-2xl font-bold">Edu-Tech</h1>
-        <p className="text-blue-200 text-sm mt-1">Sistema Institucional</p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-blue-800 flex items-center justify-center shrink-0">
+            <GraduationCap size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Edu-Tech</h1>
+            <p className="text-blue-200 text-sm mt-1">Sistema Institucional</p>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 p-4">
