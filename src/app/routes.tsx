@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { RootLayout } from "./layouts/RootLayout";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 // ✅ RoleSelectionPage eliminado — ya no se usa
 import { DashboardPage } from "./pages/DashboardPage";
 import { LibraryCatalogPage } from "./pages/LibraryCatalogPage";
@@ -11,7 +12,6 @@ import { MyFinesPage } from "./pages/MyFinesPage";
 import { RoomReservationPage } from "./pages/RoomReservationPage";
 import { SubjectsPage } from "./pages/SubjectsPage";
 import { SubjectDetailPage } from "./pages/SubjectDetailPage";
-import { ReservationsPage } from "./pages/ReservationsPage";
 import { UserManagementPage } from "./pages/UserManagementPage";
 import { BookManagementPage } from "./pages/BookManagementPage";
 import { ActiveLoansPage } from "./pages/ActiveLoansPage";
@@ -20,6 +20,9 @@ import { MyLoansPage } from "./pages/MyLoansPage";
 import { RoomsPage } from "./pages/RoomsPage";
 import { MyRoomReservationsPage } from "./pages/MyRoomReservationsPage";
 import { RoomReservationsManagementPage } from "./pages/RoomReservationsManagementPage";
+import { RoomsManagementPage } from "./pages/RoomsManagementPage";
+import { AdminReservationsPage } from "./pages/AdminReservationsPage";
+import { BookReservationsManagementPage } from "./pages/BookReservationsManagementPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("accessToken");
@@ -33,6 +36,7 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       { index: true, Component: LoginPage },
+      { path: "register", Component: RegisterPage },
       // ✅ role-selection eliminado
       { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
       { path: "library", element: <ProtectedRoute><LibraryCatalogPage /></ProtectedRoute> },
@@ -43,7 +47,9 @@ export const router = createBrowserRouter([
       { path: "library/rooms", element: <ProtectedRoute><RoomReservationPage /></ProtectedRoute> },
       { path: "subjects", element: <ProtectedRoute><SubjectsPage /></ProtectedRoute> },
       { path: "subjects/:id", element: <ProtectedRoute><SubjectDetailPage /></ProtectedRoute> },
-      { path: "reservations", element: <ProtectedRoute><ReservationsPage /></ProtectedRoute> },
+      { path: "reservations", element: <ProtectedRoute><AdminReservationsPage /></ProtectedRoute> },
+      { path: "reservations/rooms", element: <ProtectedRoute><RoomReservationsManagementPage /></ProtectedRoute> },
+      { path: "reservations/books", element: <ProtectedRoute><BookReservationsManagementPage /></ProtectedRoute> },
       { path: "users", element: <ProtectedRoute><UserManagementPage /></ProtectedRoute> },
       { path: "book-management", element: <ProtectedRoute><BookManagementPage /></ProtectedRoute> },
       { path: "active-loans", element: <ProtectedRoute><ActiveLoansPage /></ProtectedRoute> },
@@ -52,6 +58,7 @@ export const router = createBrowserRouter([
       { path: "rooms", element: <ProtectedRoute><RoomsPage /></ProtectedRoute> },
       { path: "my-room-reservations", element: <ProtectedRoute><MyRoomReservationsPage /></ProtectedRoute> },
       { path: "room-reservations-management", element: <ProtectedRoute><RoomReservationsManagementPage /></ProtectedRoute> },
+      { path: "rooms-management", element: <ProtectedRoute><RoomsManagementPage /></ProtectedRoute> },
     ],
   },
 ]);

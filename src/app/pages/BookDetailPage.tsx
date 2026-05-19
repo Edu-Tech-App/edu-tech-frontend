@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Sidebar } from "../components/Sidebar";
 import { TopBar } from "../components/TopBar";
@@ -9,40 +9,133 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
+import { api, API_URL_PUBLIC, type BookCategory } from "../../services/api";
+
+interface BookDetail {
+  id: number;
+  titulo: string;
+  autor: string;
+  categoria: string | null;
+  editorial: string | null;
+  portadaUrl?: string | null;
+  cantidadDisponible: number;
+  estado: string;
+}
+
+const formatCategory = (categoria: string | null) => {
+  if (!categoria) return "Sin categoría";
+
+  const labels: Record<BookCategory, string> = {
+    INGENIERIA_SISTEMAS: "Ingeniería de Sistemas",
+    INGENIERIA_CIVIL: "Ingeniería Civil",
+    INGENIERIA_INDUSTRIAL: "Ingeniería Industrial",
+    ADMINISTRACION: "Administración",
+    CONTADURIA: "Contaduría",
+    ECONOMIA: "Economía",
+    DERECHO: "Derecho",
+    MEDICINA: "Medicina",
+    ENFERMERIA: "Enfermería",
+    PSICOLOGIA: "Psicología",
+    EDUCACION: "Educación",
+    MATEMATICAS: "Matemáticas",
+  };
+
+  return labels[categoria as BookCategory] || categoria;
+};
 
 export const BookDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showBorrowDialog, setShowBorrowDialog] = useState(false);
+  const [book, setBook] = useState<BookDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const book = {
-    id: id,
-    title: 'Introducción a los Algoritmos',
-    author: 'Thomas H. Cormen, Charles E. Leiserson',
-    isbn: '978-0262033848',
-    category: 'Ingeniería de Sistemas',
-    publisher: 'MIT Press',
-    year: 2009,
-    pages: 1312,
-    status: 'Disponible',
-    copies: 5,
-    description: 'Un libro completo que explica muchos algoritmos paso a paso, facilitando entender cómo se diseñan y cómo funcionan.',
-};
+  useEffect(() => {
+    const loadBook = async () => {
+      if (!id) {
+        toast.error("No se encontró el identificador del libro");
+        navigate("/library");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await api.getBookById(Number(id));
+        setBook(data);
+      } catch (error: any) {
+        toast.error(error.message || "No se pudo cargar el libro");
+        navigate("/library");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadBook();
+  }, [id, navigate]);
 
   const handleBorrow = () => {
-    if (user?.hasPendingFines) {
-      toast.error('Cannot borrow books. You have pending fines.');
+    if (!book) {
       return;
     }
+
+    if (book.cantidadDisponible <= 0 || book.estado !== "DISPONIBLE") {
+      toast.error("Este libro no está disponible para préstamo en este momento.");
+      return;
+    }
+
     setShowBorrowDialog(true);
   };
 
   const confirmBorrow = () => {
     setShowBorrowDialog(false);
-    toast.success('Book borrowed successfully! Due date: May 24, 2026');
+    toast.success("El módulo de préstamos se conectará en el siguiente paso.");
     setTimeout(() => navigate('/library'), 1500);
   };
+
+  const formatStatus = (estado: string) => {
+    if (estado === "DISPONIBLE") return "Disponible";
+    if (estado === "MANTENIMIENTO") return "Mantenimiento";
+    if (estado === "BAJA") return "Baja";
+    return estado;
+  };
+
+  const getCoverStyles = (categoria: string | null) => {
+    const styles: Record<string, string> = {
+      INGENIERIA_SISTEMAS: "from-slate-900 via-blue-900 to-cyan-700",
+      INGENIERIA_CIVIL: "from-stone-800 via-amber-700 to-orange-500",
+      INGENIERIA_INDUSTRIAL: "from-zinc-900 via-neutral-700 to-lime-600",
+      ADMINISTRACION: "from-emerald-900 via-green-700 to-teal-500",
+      CONTADURIA: "from-sky-950 via-blue-800 to-sky-500",
+      ECONOMIA: "from-emerald-950 via-emerald-700 to-yellow-500",
+      DERECHO: "from-neutral-950 via-neutral-800 to-red-700",
+      MEDICINA: "from-red-950 via-rose-700 to-pink-500",
+      ENFERMERIA: "from-cyan-900 via-teal-700 to-sky-400",
+      PSICOLOGIA: "from-fuchsia-950 via-purple-700 to-pink-500",
+      EDUCACION: "from-indigo-950 via-indigo-700 to-yellow-500",
+      MATEMATICAS: "from-slate-950 via-violet-800 to-indigo-500",
+    };
+
+    return styles[categoria || ""] || "from-slate-800 via-slate-700 to-slate-500";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <TopBar />
+        <main className="ml-64 pt-16 p-6">
+          <Card>
+            <CardContent className="p-6 text-gray-500">Cargando libro...</CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!book) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,14 +151,45 @@ export const BookDetailPage = () => {
           <div className="md:col-span-1">
             <Card>
               <CardContent className="p-6">
-                <div className="aspect-[3/4] bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center mb-4">
-                  <BookOpen size={64} className="text-white" />
-                </div>
+                {book.portadaUrl ? (
+                  <img
+                    src={`${API_URL_PUBLIC}${book.portadaUrl}`}
+                    alt={book.titulo}
+                    className="aspect-[3/4] rounded-lg mb-4 w-full object-cover border"
+                  />
+                ) : (
+                  <div className={`aspect-[3/4] rounded-lg mb-4 overflow-hidden bg-gradient-to-br ${getCoverStyles(book.categoria)}`}>
+                    <div className="h-full flex flex-col justify-between p-6 text-white">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold tracking-[0.3em] uppercase opacity-80">
+                          Edu-Tech
+                        </span>
+                        <BookOpen size={28} className="opacity-80" />
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.25em] opacity-75 mb-3">
+                          {formatCategory(book.categoria)}
+                        </p>
+                        <h3 className="text-2xl font-bold leading-tight mb-3 line-clamp-4">
+                          {book.titulo}
+                        </h3>
+                        <p className="text-sm opacity-85 line-clamp-2">
+                          {book.autor}
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t border-white/20">
+                        <p className="text-xs uppercase tracking-[0.2em] opacity-70">
+                          Biblioteca Institucional
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <Badge className={book.status === 'Available' ? 'bg-green-500' : 'bg-yellow-500'}>
-                    {book.status}
+                  <Badge className={book.estado === "DISPONIBLE" ? "bg-green-500" : "bg-yellow-500"}>
+                    {formatStatus(book.estado)}
                   </Badge>
-                  <p className="text-sm text-gray-600">{book.copies} copias disponibles</p>
+                  <p className="text-sm text-gray-600">{book.cantidadDisponible} copias disponibles</p>
                 </div>
               </CardContent>
             </Card>
@@ -74,36 +198,34 @@ export const BookDetailPage = () => {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl">{book.title}</CardTitle>
-                <p className="text-gray-600">{book.author}</p>
+                <CardTitle className="text-2xl">{book.titulo}</CardTitle>
+                <p className="text-gray-600">{book.autor}</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-700">{book.description}</p>
+                <p className="text-gray-700">
+                  Consulta la información principal del libro seleccionado dentro del catálogo institucional.
+                </p>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                   <div>
-                    <p className="text-sm text-gray-600">ISBN</p>
-                    <p className="font-medium">{book.isbn}</p>
+                    <p className="text-sm text-gray-600">ID</p>
+                    <p className="font-medium">{book.id}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Categoría</p>
-                    <p className="font-medium">{book.category}</p>
+                    <p className="font-medium">{formatCategory(book.categoria)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Editorial</p>
-                    <p className="font-medium">{book.publisher}</p>
+                    <p className="font-medium">{book.editorial || "Sin editorial"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Año</p>
-                    <p className="font-medium">{book.year}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Páginas</p>
-                    <p className="font-medium">{book.pages}</p>
+                    <p className="text-sm text-gray-600">Estado</p>
+                    <p className="font-medium">{formatStatus(book.estado)}</p>
                   </div>
                 </div>
 
-                {user?.role === 'student' && (
+                {user?.rol === "estudiante" && (
                   <div className="pt-4">
                     <Button onClick={handleBorrow} className="w-full bg-blue-900 hover:bg-blue-800">
                       Solicitar Préstamo
@@ -120,7 +242,7 @@ export const BookDetailPage = () => {
             <DialogHeader>
               <DialogTitle>Confirmar Préstamo</DialogTitle>
               <DialogDescription>
-                ¿Estás seguro de que quieres solicitar "{book.title}"?
+                ¿Estás seguro de que quieres solicitar "{book.titulo}"?
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">

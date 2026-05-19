@@ -1,146 +1,323 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { TopBar } from "../components/TopBar";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Search, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Label } from "../components/ui/label";
+import { Search, XCircle, CheckCircle, Clock, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../../services/api";
 
-interface Reservation {
-  id: string;
+type ReservationStatus = "ACTIVA" | "COMPLETADA" | "CANCELADA";
+
+interface RoomOption {
+  id: number;
+  nombre: string;
+}
+
+interface UserOption {
+  id: number;
+  nombreCompleto: string;
+  rol: string;
+}
+
+interface ReservationRecord {
+  id: number;
+  roomId: number;
   roomName: string;
+  userId: number | null;
   userName: string;
   userRole: string;
   date: string;
   startTime: string;
   endTime: string;
-  status: 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
-  createdAt: string;
+  status: "active" | "completed" | "cancelled";
+  rawStatus: ReservationStatus;
 }
 
+interface ApiReservation {
+  id: number;
+  salaId: number;
+  fechaReserva: string;
+  horaInicio: string;
+  horaFin: string;
+  estado: ReservationStatus;
+  sala?: {
+    nombre?: string;
+  };
+  estudiante?: {
+    usuarioId?: number;
+    user?: {
+      id?: number;
+      nombreCompleto?: string;
+      rol?: string;
+    };
+  };
+  docente?: {
+    usuarioId?: number;
+    user?: {
+      id?: number;
+      nombreCompleto?: string;
+      rol?: string;
+    };
+  };
+}
+
+const normalizeSearchValue = (value?: string | null) =>
+  (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const formatUserRole = (role?: string) => {
+  switch (role) {
+    case "estudiante":
+      return "Estudiante";
+    case "docente":
+      return "Docente";
+    case "bibliotecario":
+      return "Bibliotecario";
+    case "administrativo":
+      return "Administrativo";
+    default:
+      return "Sin rol";
+  }
+};
+
+const mapReservationStatus = (status: ReservationStatus): ReservationRecord["status"] => {
+  switch (status) {
+    case "COMPLETADA":
+      return "completed";
+    case "CANCELADA":
+      return "cancelled";
+    default:
+      return "active";
+  }
+};
+
+const formatTime = (time?: string) => (time ? time.slice(0, 5) : "");
+
+const STATUS_OPTIONS: { value: ReservationStatus; label: string }[] = [
+  { value: "ACTIVA", label: "Activa" },
+  { value: "COMPLETADA", label: "Completada" },
+  { value: "CANCELADA", label: "Cancelada" },
+];
+
 export const RoomReservationsManagementPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [showActionDialog, setShowActionDialog] = useState(false);
-  const [actionType, setActionType] = useState<'approve' | 'cancel'>('approve');
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [reservations, setReservations] = useState<ReservationRecord[]>([]);
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showFormDialog, setShowFormDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<ReservationRecord | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationRecord | null>(null);
+  const [formData, setFormData] = useState({
+    salaId: "",
+    userId: "",
+    fechaReserva: "",
+    horaInicio: "",
+    horaFin: "",
+    estado: "ACTIVA" as ReservationStatus,
+  });
 
-  const [reservations, setReservations] = useState<Reservation[]>([
-    {
-      id: '1',
-      roomName: 'Sala A - Estudio Grupal',
-      userName: 'Juan Pérez',
-      userRole: 'Estudiante',
-      date: '2026-04-26',
-      startTime: '10:00',
-      endTime: '12:00',
-      status: 'pending',
-      createdAt: '2026-04-25T08:30:00',
-    },
-    {
-      id: '2',
-      roomName: 'Sala C - Conferencias',
-      userName: 'María González',
-      userRole: 'Maestro',
-      date: '2026-04-27',
-      startTime: '14:00',
-      endTime: '16:00',
-      status: 'approved',
-      createdAt: '2026-04-25T09:15:00',
-    },
-    {
-      id: '3',
-      roomName: 'Sala B - Estudio Individual',
-      userName: 'Carlos Rodríguez',
-      userRole: 'Estudiante',
-      date: '2026-04-25',
-      startTime: '09:00',
-      endTime: '11:00',
-      status: 'active',
-      createdAt: '2026-04-24T16:20:00',
-    },
-    {
-      id: '4',
-      roomName: 'Sala E - Multimedia',
-      userName: 'Ana López',
-      userRole: 'Estudiante',
-      date: '2026-04-20',
-      startTime: '15:00',
-      endTime: '17:00',
-      status: 'completed',
-      createdAt: '2026-04-19T10:00:00',
-    },
-    {
-      id: '5',
-      roomName: 'Sala D - Estudio Grupal',
-      userName: 'Pedro Martínez',
-      userRole: 'Maestro',
-      date: '2026-04-28',
-      startTime: '11:00',
-      endTime: '13:00',
-      status: 'pending',
-      createdAt: '2026-04-25T10:45:00',
-    },
-  ]);
+  const loadPageData = async () => {
+    try {
+      setLoading(true);
+      const [reservationsData, roomsData, usersData] = await Promise.all([
+        api.getRoomReservations(),
+        api.getStudyRooms(),
+        api.getUsers(),
+      ]);
 
-  const filteredReservations = reservations.filter(reservation => {
+      const mappedReservations = (reservationsData as ApiReservation[]).map((reservation) => {
+        const linkedUser = reservation.estudiante?.user ?? reservation.docente?.user;
+        const linkedUserId =
+          reservation.estudiante?.usuarioId ??
+          reservation.docente?.usuarioId ??
+          linkedUser?.id ??
+          null;
+
+        return {
+          id: reservation.id,
+          roomId: reservation.salaId,
+          roomName: reservation.sala?.nombre || "Sala sin nombre",
+          userId: linkedUserId,
+          userName: linkedUser?.nombreCompleto || "Usuario no disponible",
+          userRole: formatUserRole(linkedUser?.rol),
+          date: reservation.fechaReserva,
+          startTime: formatTime(reservation.horaInicio),
+          endTime: formatTime(reservation.horaFin),
+          status: mapReservationStatus(reservation.estado),
+          rawStatus: reservation.estado,
+        };
+      });
+
+      setReservations(mappedReservations);
+      setRooms((roomsData as RoomOption[]).map((room) => ({ id: room.id, nombre: room.nombre })));
+      setUsers(
+        (usersData as UserOption[])
+          .filter((user) => user.rol === "estudiante" || user.rol === "docente")
+          .map((user) => ({
+            id: user.id,
+            nombreCompleto: user.nombreCompleto,
+            rol: user.rol,
+          })),
+      );
+    } catch (error: any) {
+      toast.error(error.message || "No se pudieron cargar las reservas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadPageData();
+  }, []);
+
+  const filteredReservations = reservations.filter((reservation) => {
     const matchesSearch =
-      reservation.roomName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.userName.toLowerCase().includes(searchTerm.toLowerCase());
+      normalizeSearchValue(reservation.roomName).includes(normalizeSearchValue(searchTerm)) ||
+      normalizeSearchValue(reservation.userName).includes(normalizeSearchValue(searchTerm));
 
-    const matchesStatus = filterStatus === 'all' || reservation.status === filterStatus;
+    const matchesStatus = filterStatus === "all" || reservation.status === filterStatus;
 
     return matchesSearch && matchesStatus;
   });
 
-  const pendingCount = reservations.filter(r => r.status === 'pending').length;
-  const approvedCount = reservations.filter(r => r.status === 'approved' || r.status === 'active').length;
-  const completedCount = reservations.filter(r => r.status === 'completed').length;
-  const cancelledCount = reservations.filter(r => r.status === 'cancelled').length;
+  const activeCount = reservations.filter((reservation) => reservation.status === "active").length;
+  const completedCount = reservations.filter((reservation) => reservation.status === "completed").length;
+  const cancelledCount = reservations.filter((reservation) => reservation.status === "cancelled").length;
 
-  const handleActionClick = (reservation: Reservation, action: 'approve' | 'cancel') => {
-    setSelectedReservation(reservation);
-    setActionType(action);
-    setShowActionDialog(true);
+  const resetForm = () => {
+    setFormData({
+      salaId: "",
+      userId: "",
+      fechaReserva: "",
+      horaInicio: "",
+      horaFin: "",
+      estado: "ACTIVA",
+    });
   };
 
-  const handleConfirmAction = () => {
-    if (!selectedReservation) return;
+  const handleOpenCreateDialog = () => {
+    setEditingReservation(null);
+    resetForm();
+    setShowFormDialog(true);
+  };
 
-    if (actionType === 'approve') {
-      setReservations(reservations.map(r =>
-        r.id === selectedReservation.id
-          ? { ...r, status: 'approved' as const }
-          : r
-      ));
-      toast.success('Reserva aprobada exitosamente');
-    } else {
-      setReservations(reservations.map(r =>
-        r.id === selectedReservation.id
-          ? { ...r, status: 'cancelled' as const }
-          : r
-      ));
-      toast.success('Reserva cancelada exitosamente');
+  const handleOpenEditDialog = (reservation: ReservationRecord) => {
+    setEditingReservation(reservation);
+    setFormData({
+      salaId: String(reservation.roomId),
+      userId: reservation.userId ? String(reservation.userId) : "",
+      fechaReserva: reservation.date.slice(0, 10),
+      horaInicio: reservation.startTime,
+      horaFin: reservation.endTime,
+      estado: reservation.rawStatus,
+    });
+    setShowFormDialog(true);
+  };
+
+  const handleSaveReservation = async () => {
+    if (!formData.salaId || !formData.userId || !formData.fechaReserva || !formData.horaInicio || !formData.horaFin) {
+      toast.error("Completa todos los campos");
+      return;
     }
 
-    setShowActionDialog(false);
-    setSelectedReservation(null);
+    try {
+      setSaving(true);
+      const payload = {
+        salaId: Number(formData.salaId),
+        userId: Number(formData.userId),
+        fechaReserva: formData.fechaReserva,
+        horaInicio: formData.horaInicio,
+        horaFin: formData.horaFin,
+        estado: formData.estado,
+      };
+
+      if (editingReservation) {
+        await api.updateRoomReservationAsAdmin(editingReservation.id, payload);
+        toast.success("Reserva actualizada exitosamente");
+      } else {
+        await api.createRoomReservationAsAdmin(payload);
+        toast.success("Reserva creada exitosamente");
+      }
+
+      setShowFormDialog(false);
+      setEditingReservation(null);
+      resetForm();
+      await loadPageData();
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo guardar la reserva");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const getStatusBadge = (status: string) => {
+  const handleOpenCancelDialog = (reservation: ReservationRecord) => {
+    setSelectedReservation(reservation);
+    setShowCancelDialog(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!selectedReservation) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await api.adminCancelRoomReservation(selectedReservation.id);
+      toast.success("Reserva cancelada exitosamente");
+      setShowCancelDialog(false);
+      setSelectedReservation(null);
+      await loadPageData();
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo cancelar la reserva");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenDeleteDialog = (reservation: ReservationRecord) => {
+    setSelectedReservation(reservation);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedReservation) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await api.deleteRoomReservationAsAdmin(selectedReservation.id);
+      toast.success("Reserva eliminada exitosamente");
+      setShowDeleteDialog(false);
+      setSelectedReservation(null);
+      await loadPageData();
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo eliminar la reserva");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getStatusBadge = (status: ReservationRecord["status"]) => {
     switch (status) {
-      case 'pending':
-        return <Badge className="bg-yellow-500">Pendiente</Badge>;
-      case 'approved':
-        return <Badge className="bg-blue-500">Aprobada</Badge>;
-      case 'active':
-        return <Badge className="bg-green-500">En Curso</Badge>;
-      case 'completed':
-        return <Badge className="bg-gray-500">Completada</Badge>;
-      case 'cancelled':
+      case "active":
+        return <Badge className="bg-blue-500">Activa</Badge>;
+      case "completed":
+        return <Badge className="bg-green-500">Completada</Badge>;
+      case "cancelled":
         return <Badge className="bg-red-500">Cancelada</Badge>;
       default:
         return <Badge>{status}</Badge>;
@@ -151,37 +328,23 @@ export const RoomReservationsManagementPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       <TopBar />
-      <main className="ml-64 pt-16 p-6">
+      <main className="ml-64 pt-[4.5rem] px-6 pb-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Reservas de Salas</h1>
-          <p className="text-gray-600">Administra todas las reservas de salas de estudio</p>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Reservas de Salas</h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-3">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Pendientes</p>
-                  <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
+                  <p className="text-sm text-gray-600">Activas</p>
+                  <p className="text-3xl font-bold text-blue-600">{activeCount}</p>
                 </div>
-                <Clock size={40} className="text-yellow-600" />
+                <Clock size={40} className="text-blue-600" />
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Aprobadas/Activas</p>
-                  <p className="text-3xl font-bold text-blue-600">{approvedCount}</p>
-                </div>
-                <CheckCircle size={40} className="text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -193,7 +356,6 @@ export const RoomReservationsManagementPage = () => {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -207,121 +369,92 @@ export const RoomReservationsManagementPage = () => {
           </Card>
         </div>
 
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <Input
-                  placeholder="Buscar por sala o usuario..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="w-full md:w-48">
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">Todos los estados</option>
-                  <option value="pending">Pendientes</option>
-                  <option value="approved">Aprobadas</option>
-                  <option value="active">En Curso</option>
-                  <option value="completed">Completadas</option>
-                  <option value="cancelled">Canceladas</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Input
+              placeholder="Buscar por sala o usuario..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="w-48">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Todos los estados</option>
+              <option value="active">Activas</option>
+              <option value="completed">Completadas</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+          </div>
+          <Button onClick={handleOpenCreateDialog} className="bg-blue-900 hover:bg-blue-800">
+            <Plus size={16} className="mr-2" />
+            Crear Reserva
+          </Button>
+        </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Lista de Reservas</CardTitle>
-          </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-3">Sala</th>
-                    <th className="text-left p-3">Usuario</th>
-                    <th className="text-left p-3">Rol</th>
-                    <th className="text-left p-3">Fecha</th>
-                    <th className="text-left p-3">Horario</th>
-                    <th className="text-left p-3">Estado</th>
-                    <th className="text-left p-3">Solicitado</th>
-                    <th className="text-right p-3">Acciones</th>
+                    <th className="p-3 text-left">Sala</th>
+                    <th className="p-3 text-left">Usuario</th>
+                    <th className="p-3 text-left">Rol</th>
+                    <th className="p-3 text-left">Fecha</th>
+                    <th className="p-3 text-left">Horario</th>
+                    <th className="p-3 text-left">Estado</th>
+                    <th className="p-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReservations.map((reservation) => (
-                    <tr
-                      key={reservation.id}
-                      className={`border-b hover:bg-gray-50 ${reservation.status === 'pending' ? 'bg-yellow-50' : ''}`}
-                    >
-                      <td className="p-3 font-medium">{reservation.roomName}</td>
-                      <td className="p-3 text-gray-600">{reservation.userName}</td>
-                      <td className="p-3 text-gray-600">{reservation.userRole}</td>
-                      <td className="p-3 text-gray-600">
-                        {new Date(reservation.date).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="p-3 text-gray-600">
-                        {reservation.startTime} - {reservation.endTime}
-                      </td>
-                      <td className="p-3">{getStatusBadge(reservation.status)}</td>
-                      <td className="p-3 text-gray-600 text-sm">
-                        {new Date(reservation.createdAt).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-2 justify-end">
-                          {reservation.status === 'pending' && (
-                            <>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-gray-500">Cargando reservas...</td>
+                    </tr>
+                  ) : filteredReservations.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-gray-500">No se encontraron reservas</td>
+                    </tr>
+                  ) : (
+                    filteredReservations.map((reservation) => (
+                      <tr key={reservation.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3 font-medium">{reservation.roomName}</td>
+                        <td className="p-3 text-gray-600">{reservation.userName}</td>
+                        <td className="p-3 text-gray-600">{reservation.userRole}</td>
+                        <td className="p-3 text-gray-600">{new Date(reservation.date).toLocaleDateString("es-ES")}</td>
+                        <td className="p-3 text-gray-600">{reservation.startTime} - {reservation.endTime}</td>
+                        <td className="p-3">{getStatusBadge(reservation.status)}</td>
+                        <td className="p-3">
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleOpenEditDialog(reservation)}>
+                              <Edit size={16} />
+                            </Button>
+                            {reservation.status === "active" && (
                               <Button
                                 size="sm"
-                                onClick={() => handleActionClick(reservation, 'approve')}
-                                className="bg-green-600 hover:bg-green-700"
+                                variant="ghost"
+                                onClick={() => handleOpenCancelDialog(reservation)}
                               >
-                                <CheckCircle size={16} className="mr-1" />
-                                Aprobar
+                                <XCircle size={16} className="text-red-600" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleActionClick(reservation, 'cancel')}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle size={16} className="mr-1" />
-                                Rechazar
-                              </Button>
-                            </>
-                          )}
-                          {(reservation.status === 'approved' || reservation.status === 'active') && (
+                            )}
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => handleActionClick(reservation, 'cancel')}
-                              className="text-red-600 hover:text-red-700"
+                              variant="ghost"
+                              onClick={() => handleOpenDeleteDialog(reservation)}
                             >
-                              <XCircle size={16} className="mr-1" />
-                              Cancelar
+                              <Trash2 size={16} className="text-red-600" />
                             </Button>
-                          )}
-                          {(reservation.status === 'completed' || reservation.status === 'cancelled') && (
-                            <span className="text-sm text-gray-500 px-3">-</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredReservations.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="p-8 text-center text-gray-500">
-                        No se encontraron reservas
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -329,41 +462,132 @@ export const RoomReservationsManagementPage = () => {
           </CardContent>
         </Card>
 
-        <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
-          <DialogContent>
+        <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>
-                {actionType === 'approve' ? 'Aprobar Reserva' : 'Cancelar Reserva'}
-              </DialogTitle>
+              <DialogTitle>{editingReservation ? "Editar Reserva" : "Crear Reserva"}</DialogTitle>
               <DialogDescription>
-                {actionType === 'approve'
-                  ? `¿Confirmas que quieres aprobar la reserva de "${selectedReservation?.userName}"?`
-                  : `¿Estás seguro de que quieres cancelar la reserva de "${selectedReservation?.userName}"?`
-                }
+                {editingReservation ? "Actualiza la información de la reserva" : "Completa los datos de la nueva reserva"}
               </DialogDescription>
             </DialogHeader>
-            {selectedReservation && (
-              <div className={`py-4 ${actionType === 'approve' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border p-4 rounded-lg`}>
-                <p className={`text-sm font-medium ${actionType === 'approve' ? 'text-green-800' : 'text-red-800'}`}>
-                  Detalles de la reserva:
-                </p>
-                <ul className={`text-sm ${actionType === 'approve' ? 'text-green-700' : 'text-red-700'} mt-2 space-y-1`}>
-                  <li><strong>Sala:</strong> {selectedReservation.roomName}</li>
-                  <li><strong>Usuario:</strong> {selectedReservation.userName} ({selectedReservation.userRole})</li>
-                  <li><strong>Fecha:</strong> {new Date(selectedReservation.date).toLocaleDateString('es-ES')}</li>
-                  <li><strong>Horario:</strong> {selectedReservation.startTime} - {selectedReservation.endTime}</li>
-                </ul>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div>
+                <Label>Sala</Label>
+                <Select value={formData.salaId} onValueChange={(value) => setFormData({ ...formData, salaId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una sala" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.id} value={String(room.id)}>
+                        {room.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+              <div>
+                <Label>Usuario</Label>
+                <Select value={formData.userId} onValueChange={(value) => setFormData({ ...formData, userId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.nombreCompleto} - {formatUserRole(user.rol)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fecha</Label>
+                <Input
+                  type="date"
+                  value={formData.fechaReserva}
+                  onChange={(e) => setFormData({ ...formData, fechaReserva: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <Select
+                  value={formData.estado}
+                  onValueChange={(value) => setFormData({ ...formData, estado: value as ReservationStatus })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Hora Inicio</Label>
+                <Input
+                  type="time"
+                  value={formData.horaInicio}
+                  onChange={(e) => setFormData({ ...formData, horaInicio: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Hora Fin</Label>
+                <Input
+                  type="time"
+                  value={formData.horaFin}
+                  onChange={(e) => setFormData({ ...formData, horaFin: e.target.value })}
+                />
+              </div>
+            </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowActionDialog(false)}>
+              <Button variant="outline" onClick={() => setShowFormDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                onClick={handleConfirmAction}
-                className={actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
-              >
-                {actionType === 'approve' ? 'Aprobar' : 'Rechazar'} Reserva
+              <Button onClick={handleSaveReservation} disabled={saving} className="bg-blue-900 hover:bg-blue-800">
+                {saving ? "Guardando..." : editingReservation ? "Guardar Cambios" : "Crear Reserva"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancelar Reserva</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que quieres cancelar la reserva de "{selectedReservation?.userName}"?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                Volver
+              </Button>
+              <Button onClick={handleConfirmCancel} disabled={saving} className="bg-red-600 hover:bg-red-700">
+                {saving ? "Cancelando..." : "Cancelar Reserva"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Eliminar Reserva</DialogTitle>
+              <DialogDescription>
+                ¿Estás seguro de que quieres eliminar esta reserva? Esta acción no se puede deshacer.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                Volver
+              </Button>
+              <Button onClick={handleConfirmDelete} disabled={saving} className="bg-red-600 hover:bg-red-700">
+                {saving ? "Eliminando..." : "Eliminar Reserva"}
               </Button>
             </DialogFooter>
           </DialogContent>
