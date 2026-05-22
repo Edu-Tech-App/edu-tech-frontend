@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Sidebar } from "../components/Sidebar";
-import { TopBar } from "../components/TopBar";
+import { PageLayout } from "../components/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -24,7 +23,6 @@ interface BookDetail {
 
 const formatCategory = (categoria: string | null) => {
   if (!categoria) return "Sin categoría";
-
   const labels: Record<BookCategory, string> = {
     INGENIERIA_SISTEMAS: "Ingeniería de Sistemas",
     INGENIERIA_CIVIL: "Ingeniería Civil",
@@ -39,7 +37,6 @@ const formatCategory = (categoria: string | null) => {
     EDUCACION: "Educación",
     MATEMATICAS: "Matemáticas",
   };
-
   return labels[categoria as BookCategory] || categoria;
 };
 
@@ -53,12 +50,7 @@ export const BookDetailPage = () => {
 
   useEffect(() => {
     const loadBook = async () => {
-      if (!id) {
-        toast.error("No se encontró el identificador del libro");
-        navigate("/library");
-        return;
-      }
-
+      if (!id) { toast.error("No se encontró el identificador del libro"); navigate("/library"); return; }
       setLoading(true);
       try {
         const data = await api.getBookById(Number(id));
@@ -70,20 +62,15 @@ export const BookDetailPage = () => {
         setLoading(false);
       }
     };
-
     void loadBook();
   }, [id, navigate]);
 
   const handleBorrow = () => {
-    if (!book) {
-      return;
-    }
-
+    if (!book) return;
     if (book.cantidadDisponible <= 0 || book.estado !== "DISPONIBLE") {
       toast.error("Este libro no está disponible para préstamo en este momento.");
       return;
     }
-
     setShowBorrowDialog(true);
   };
 
@@ -115,33 +102,24 @@ export const BookDetailPage = () => {
       EDUCACION: "from-indigo-950 via-indigo-700 to-yellow-500",
       MATEMATICAS: "from-slate-950 via-violet-800 to-indigo-500",
     };
-
     return styles[categoria || ""] || "from-slate-800 via-slate-700 to-slate-500";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
-        <TopBar />
-        <main className="ml-64 pt-16 p-6">
-          <Card>
-            <CardContent className="p-6 text-gray-500">Cargando libro...</CardContent>
-          </Card>
-        </main>
-      </div>
+      <PageLayout>
+        <div className="p-6">
+          <Card><CardContent className="p-6 text-gray-500">Cargando libro...</CardContent></Card>
+        </div>
+      </PageLayout>
     );
   }
 
-  if (!book) {
-    return null;
-  }
+  if (!book) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
-      <main className="ml-64 pt-16 p-6">
+    <PageLayout>
+      <div className="p-6">
         <Button variant="ghost" onClick={() => navigate('/library')} className="mb-4">
           <ArrowLeft size={16} className="mr-2" />
           Volver al Catálogo
@@ -152,43 +130,27 @@ export const BookDetailPage = () => {
             <Card>
               <CardContent className="p-6">
                 {book.portadaUrl ? (
-                  <img
-                    src={`${API_URL_PUBLIC}${book.portadaUrl}`}
-                    alt={book.titulo}
-                    className="aspect-[3/4] rounded-lg mb-4 w-full object-cover border"
-                  />
+                  <img src={`${API_URL_PUBLIC}${book.portadaUrl}`} alt={book.titulo} className="aspect-[3/4] rounded-lg mb-4 w-full object-cover border" />
                 ) : (
                   <div className={`aspect-[3/4] rounded-lg mb-4 overflow-hidden bg-gradient-to-br ${getCoverStyles(book.categoria)}`}>
                     <div className="h-full flex flex-col justify-between p-6 text-white">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-[0.3em] uppercase opacity-80">
-                          Edu-Tech
-                        </span>
+                        <span className="text-xs font-semibold tracking-[0.3em] uppercase opacity-80">Edu-Tech</span>
                         <BookOpen size={28} className="opacity-80" />
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-[0.25em] opacity-75 mb-3">
-                          {formatCategory(book.categoria)}
-                        </p>
-                        <h3 className="text-2xl font-bold leading-tight mb-3 line-clamp-4">
-                          {book.titulo}
-                        </h3>
-                        <p className="text-sm opacity-85 line-clamp-2">
-                          {book.autor}
-                        </p>
+                        <p className="text-xs uppercase tracking-[0.25em] opacity-75 mb-3">{formatCategory(book.categoria)}</p>
+                        <h3 className="text-2xl font-bold leading-tight mb-3 line-clamp-4">{book.titulo}</h3>
+                        <p className="text-sm opacity-85 line-clamp-2">{book.autor}</p>
                       </div>
                       <div className="pt-4 border-t border-white/20">
-                        <p className="text-xs uppercase tracking-[0.2em] opacity-70">
-                          Biblioteca Institucional
-                        </p>
+                        <p className="text-xs uppercase tracking-[0.2em] opacity-70">Biblioteca Institucional</p>
                       </div>
                     </div>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Badge className={book.estado === "DISPONIBLE" ? "bg-green-500" : "bg-yellow-500"}>
-                    {formatStatus(book.estado)}
-                  </Badge>
+                  <Badge className={book.estado === "DISPONIBLE" ? "bg-green-500" : "bg-yellow-500"}>{formatStatus(book.estado)}</Badge>
                   <p className="text-sm text-gray-600">{book.cantidadDisponible} copias disponibles</p>
                 </div>
               </CardContent>
@@ -202,34 +164,16 @@ export const BookDetailPage = () => {
                 <p className="text-gray-600">{book.autor}</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-700">
-                  Consulta la información principal del libro seleccionado dentro del catálogo institucional.
-                </p>
-
+                <p className="text-gray-700">Consulta la información principal del libro seleccionado dentro del catálogo institucional.</p>
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm text-gray-600">ID</p>
-                    <p className="font-medium">{book.id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Categoría</p>
-                    <p className="font-medium">{formatCategory(book.categoria)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Editorial</p>
-                    <p className="font-medium">{book.editorial || "Sin editorial"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Estado</p>
-                    <p className="font-medium">{formatStatus(book.estado)}</p>
-                  </div>
+                  <div><p className="text-sm text-gray-600">ID</p><p className="font-medium">{book.id}</p></div>
+                  <div><p className="text-sm text-gray-600">Categoría</p><p className="font-medium">{formatCategory(book.categoria)}</p></div>
+                  <div><p className="text-sm text-gray-600">Editorial</p><p className="font-medium">{book.editorial || "Sin editorial"}</p></div>
+                  <div><p className="text-sm text-gray-600">Estado</p><p className="font-medium">{formatStatus(book.estado)}</p></div>
                 </div>
-
                 {user?.rol === "estudiante" && (
                   <div className="pt-4">
-                    <Button onClick={handleBorrow} className="w-full bg-blue-900 hover:bg-blue-800">
-                      Solicitar Préstamo
-                    </Button>
+                    <Button onClick={handleBorrow} className="w-full bg-blue-900 hover:bg-blue-800">Solicitar Préstamo</Button>
                   </div>
                 )}
               </CardContent>
@@ -241,25 +185,19 @@ export const BookDetailPage = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirmar Préstamo</DialogTitle>
-              <DialogDescription>
-                ¿Estás seguro de que quieres solicitar "{book.titulo}"?
-              </DialogDescription>
+              <DialogDescription>¿Estás seguro de que quieres solicitar "{book.titulo}"?</DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-gray-600">Fecha de vencimiento: 24 de mayo, 2026 (30 días)</p>
               <p className="text-sm text-gray-600 mt-2">Las devoluciones tardías tendrán una multa de $1 por día.</p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={confirmBorrow} className="bg-blue-900 hover:bg-blue-800">
-                Confirmar
-              </Button>
+              <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>Cancelar</Button>
+              <Button onClick={confirmBorrow} className="bg-blue-900 hover:bg-blue-800">Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };

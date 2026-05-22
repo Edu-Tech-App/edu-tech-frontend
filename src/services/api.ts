@@ -29,27 +29,18 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
 
 const getErrorMessage = (error: unknown, fallbackMessage: string) => {
   if (axios.isAxiosError(error)) {
     const message = error.response?.data?.message;
-
-    if (Array.isArray(message)) {
-      return message.join(", ");
-    }
-
-    if (typeof message === "string") {
-      return message;
-    }
+    if (Array.isArray(message)) return message.join(", ");
+    if (typeof message === "string") return message;
   }
-
   return fallbackMessage;
 };
 
@@ -122,13 +113,9 @@ export const api = {
     try {
       const formData = new FormData();
       formData.append("cover", file);
-
       const response = await apiClient.post(`/books/${id}/cover`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al subir la portada"));
@@ -461,7 +448,7 @@ export const api = {
 
   getStudentLoans: async (userId: number) => {
     try {
-      const response = await apiClient.get(`/loans/student/${userId}`);
+      const response = await apiClient.get(`/loans/user/${userId}`);
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al obtener préstamos del estudiante"));
@@ -474,6 +461,25 @@ export const api = {
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al obtener multas pendientes"));
+    }
+  },
+
+  getStats: async () => {
+    try {
+      const response = await apiClient.get("/stats");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener estadísticas"));
+    }
+  },
+
+  // ✅ Nuevo endpoint de multas
+  getAllFines: async () => {
+    try {
+      const response = await apiClient.get("/loans/fines/all");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener multas"));
     }
   },
 };
