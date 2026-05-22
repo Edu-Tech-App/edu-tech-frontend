@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   login: (correo: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (data: Partial<User>) => void;
   isAuthenticated: boolean;
 }
 
@@ -22,7 +23,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  // ✅ Al recargar la página, recupera el usuario del localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
@@ -31,19 +31,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (correo: string, password: string) => {
-    // ✅ Llama al backend real
     const data = await api.login({ correo, password });
-
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('user', JSON.stringify(data.user));
-
     setUser(data.user);
   };
 
   const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('profilePhoto');
     setUser(null);
+  };
+
+  // ✅ NUEVO: actualiza el usuario en contexto y localStorage
+  const updateUser = (data: Partial<User>) => {
+    if (!user) return;
+    const updated = { ...user, ...data };
+    setUser(updated);
+    localStorage.setItem('user', JSON.stringify(updated));
   };
 
   return (
@@ -51,6 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user,
       login,
       logout,
+      updateUser,
       isAuthenticated: !!user,
     }}>
       {children}

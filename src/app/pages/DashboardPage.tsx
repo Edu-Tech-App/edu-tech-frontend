@@ -23,6 +23,7 @@ export const DashboardPage = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -118,9 +119,15 @@ export const DashboardPage = () => {
     void loadDashboard();
   }, [user]);
 
+  const cardClass = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700";
+  const titleClass = "text-sm text-gray-600 dark:text-gray-400";
+  const valueClass = "mt-2 text-3xl font-bold text-gray-800 dark:text-white";
+  const iconClass = "flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300";
+  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700 p-3";
+
   const renderAdmin = () => (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Panel Administrativo</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel Administrativo</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {[
           { title: "Usuarios", value: data.totalUsers, icon: Users },
@@ -131,7 +138,19 @@ export const DashboardPage = () => {
           { title: "Préstamos Activos", value: data.activeLoans, icon: BookMarked },
         ].map((item) => {
           const Icon = item.icon;
-          return <Card key={item.title}><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">{item.title}</p><p className="mt-2 text-3xl font-bold text-gray-800">{item.value}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700"><Icon size={24} /></div></div></CardContent></Card>;
+          return (
+            <Card key={item.title} className={cardClass}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={titleClass}>{item.title}</p>
+                    <p className={valueClass}>{item.value}</p>
+                  </div>
+                  <div className={iconClass}><Icon size={24} /></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
         })}
       </div>
     </div>
@@ -139,7 +158,7 @@ export const DashboardPage = () => {
 
   const renderLibrarian = () => (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Panel de Biblioteca</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel de Biblioteca</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {[
           { title: "Préstamos Activos", value: data.activeLoansCount, icon: BookMarked },
@@ -148,21 +167,35 @@ export const DashboardPage = () => {
           { title: "Libros Disponibles", value: data.availableBooks, icon: Library },
         ].map((item) => {
           const Icon = item.icon;
-          return <Card key={item.title}><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">{item.title}</p><p className="mt-2 text-3xl font-bold text-gray-800">{item.value}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700"><Icon size={24} /></div></div></CardContent></Card>;
+          return (
+            <Card key={item.title} className={cardClass}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={titleClass}>{item.title}</p>
+                    <p className={valueClass}>{item.value}</p>
+                  </div>
+                  <div className={iconClass}><Icon size={24} /></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
         })}
       </div>
-      <Card>
-        <CardHeader><CardTitle>Actividad reciente</CardTitle></CardHeader>
+      <Card className={cardClass}>
+        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Actividad reciente</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {data.recentLoans.length === 0 ? <p className="text-gray-500">No hay movimientos recientes.</p> : data.recentLoans.map((loan: any) => (
-            <div key={loan.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <div>
-                <p className="font-medium text-gray-700">{loan.libro?.titulo || "Libro"}</p>
-                <p className="text-sm text-gray-500">{loan.estudiante?.user?.nombreCompleto || "Estudiante"} · {formatDate(loan.fechaPrestamo)}</p>
+          {data.recentLoans.length === 0
+            ? <p className="text-gray-500 dark:text-gray-400">No hay movimientos recientes.</p>
+            : data.recentLoans.map((loan: any) => (
+              <div key={loan.id} className={`flex items-center justify-between ${sectionBg}`}>
+                <div>
+                  <p className="font-medium text-gray-700 dark:text-gray-200">{loan.libro?.titulo || "Libro"}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{loan.estudiante?.user?.nombreCompleto || "Estudiante"} · {formatDate(loan.fechaPrestamo)}</p>
+                </div>
+                <Badge className="bg-blue-500">{loan.estado}</Badge>
               </div>
-              <Badge className="bg-blue-500">{loan.estado}</Badge>
-            </div>
-          ))}
+            ))}
         </CardContent>
       </Card>
     </div>
@@ -170,7 +203,7 @@ export const DashboardPage = () => {
 
   const renderTeacher = () => (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Panel Docente</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel Docente</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           { title: "Materias Asignadas", value: data.subjectCount, icon: BookOpen },
@@ -178,21 +211,35 @@ export const DashboardPage = () => {
           { title: "Reservas Completadas", value: data.completedReservations, icon: CheckCircle },
         ].map((item) => {
           const Icon = item.icon;
-          return <Card key={item.title}><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">{item.title}</p><p className="mt-2 text-3xl font-bold text-gray-800">{item.value}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700"><Icon size={24} /></div></div></CardContent></Card>;
+          return (
+            <Card key={item.title} className={cardClass}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={titleClass}>{item.title}</p>
+                    <p className={valueClass}>{item.value}</p>
+                  </div>
+                  <div className={iconClass}><Icon size={24} /></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
         })}
       </div>
-      <Card>
-        <CardHeader><CardTitle>Mis materias</CardTitle></CardHeader>
+      <Card className={cardClass}>
+        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Mis materias</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {data.subjects.length === 0 ? <p className="text-gray-500">No tienes materias asignadas.</p> : data.subjects.map((subject: any) => (
-            <div key={subject.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
-              <div>
-                <p className="font-medium text-gray-700">{subject.nombre}</p>
-                <p className="text-sm text-gray-500">{subject.codigo} · Semestre {subject.semestre}</p>
+          {data.subjects.length === 0
+            ? <p className="text-gray-500 dark:text-gray-400">No tienes materias asignadas.</p>
+            : data.subjects.map((subject: any) => (
+              <div key={subject.id} className={`flex items-center justify-between ${sectionBg}`}>
+                <div>
+                  <p className="font-medium text-gray-700 dark:text-gray-200">{subject.nombre}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{subject.codigo} · Semestre {subject.semestre}</p>
+                </div>
+                <Button size="sm" onClick={() => navigate(`/subjects/${subject.id}`)}>Gestionar</Button>
               </div>
-              <Button size="sm" onClick={() => navigate(`/subjects/${subject.id}`)}>Gestionar</Button>
-            </div>
-          ))}
+            ))}
         </CardContent>
       </Card>
     </div>
@@ -200,7 +247,7 @@ export const DashboardPage = () => {
 
   const renderStudent = () => (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Panel de Estudiante</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel de Estudiante</h1>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
           { title: "Materias", value: data.subjectsCount, icon: BookOpen },
@@ -209,44 +256,54 @@ export const DashboardPage = () => {
           { title: "Reservas Activas", value: data.reservationsCount, icon: Calendar },
         ].map((item) => {
           const Icon = item.icon;
-          return <Card key={item.title}><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">{item.title}</p><p className="mt-2 text-3xl font-bold text-gray-800">{item.value}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700"><Icon size={24} /></div></div></CardContent></Card>;
+          return (
+            <Card key={item.title} className={cardClass}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={titleClass}>{item.title}</p>
+                    <p className={valueClass}>{item.value}</p>
+                  </div>
+                  <div className={iconClass}><Icon size={24} /></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
         })}
       </div>
-      <Card>
-        <CardHeader><CardTitle>Materias disponibles</CardTitle></CardHeader>
+      <Card className={cardClass}>
+        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Materias disponibles</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {data.subjects.length === 0 ? <p className="text-gray-500">No hay materias para mostrar.</p> : data.subjects.map((subject: any) => (
-            <div key={subject.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-              <span className="font-medium text-gray-700">{subject.nombre}</span>
-              <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)}>Ver Detalles</Button>
-            </div>
-          ))}
+          {data.subjects.length === 0
+            ? <p className="text-gray-500 dark:text-gray-400">No hay materias para mostrar.</p>
+            : data.subjects.map((subject: any) => (
+              <div key={subject.id} className={`flex items-center justify-between ${sectionBg}`}>
+                <span className="font-medium text-gray-700 dark:text-gray-200">{subject.nombre}</span>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)}>Ver Detalles</Button>
+              </div>
+            ))}
         </CardContent>
       </Card>
     </div>
   );
 
   const renderContent = () => {
-    if (loading) {
-      return <div className="p-8 text-gray-500">Cargando inicio...</div>;
-    }
-    if (!data) {
-      return <div className="p-8 text-gray-500">No se pudo cargar la información.</div>;
-    }
+    if (loading) return <div className="p-8 text-gray-500 dark:text-gray-400">Cargando inicio...</div>;
+    if (!data) return <div className="p-8 text-gray-500 dark:text-gray-400">No se pudo cargar la información.</div>;
     switch (user?.rol) {
       case "administrativo": return renderAdmin();
       case "bibliotecario": return renderLibrarian();
       case "docente": return renderTeacher();
       case "estudiante": return renderStudent();
-      default: return <div className="p-8 text-gray-500">Rol no reconocido.</div>;
+      default: return <div className="p-8 text-gray-500 dark:text-gray-400">Rol no reconocido.</div>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
-      <main className="ml-64 pt-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen(prev => !prev)} />
+      <main className="ml-0 lg:ml-64 pt-16">
         {renderContent()}
       </main>
     </div>

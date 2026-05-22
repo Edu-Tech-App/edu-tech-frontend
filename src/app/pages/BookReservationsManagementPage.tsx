@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sidebar } from "../components/Sidebar";
-import { TopBar } from "../components/TopBar";
+import { PageLayout } from "../components/PageLayout";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -15,13 +14,8 @@ import { api } from "../../services/api";
 interface BookRecord { id: number; titulo: string; cantidadDisponible: number; estado: string; }
 interface UserRecord { id: number; nombreCompleto: string; rol: string; }
 interface LoanRecord {
-  id: number;
-  libroId: number;
-  estudianteId: number;
-  bookTitle: string;
-  studentName: string;
-  dueDate: string;
-  loanDate: string;
+  id: number; libroId: number; estudianteId: number;
+  bookTitle: string; studentName: string; dueDate: string; loanDate: string;
   status: "ACTIVO" | "DEVUELTO" | "VENCIDO" | "PERDIDO";
 }
 
@@ -36,33 +30,20 @@ export const BookReservationsManagementPage = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingLoan, setEditingLoan] = useState<LoanRecord | null>(null);
   const [loanToDelete, setLoanToDelete] = useState<LoanRecord | null>(null);
-  const [formData, setFormData] = useState({
-    libroId: "",
-    estudianteId: "",
-    fechaLimiteDevolucion: "",
-    estado: "ACTIVO" as LoanRecord["status"],
-  });
+  const [formData, setFormData] = useState({ libroId: "", estudianteId: "", fechaLimiteDevolucion: "", estado: "ACTIVO" as LoanRecord["status"] });
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [loansData, booksData, usersData] = await Promise.all([
-        api.getLoans ? api.getLoans() : api.getUsers(), // fallback impossible, handled below
-        api.getBooks(),
-        api.getUsers(),
-      ]);
-
+      const [loansData, booksData, usersData] = await Promise.all([api.getLoans(), api.getBooks(), api.getUsers()]);
       const mappedLoans = (Array.isArray(loansData) ? loansData : []).map((loan: any) => ({
-        id: loan.id,
-        libroId: loan.libroId,
-        estudianteId: loan.estudianteId,
+        id: loan.id, libroId: loan.libroId, estudianteId: loan.estudianteId,
         bookTitle: loan.libro?.titulo || "Libro no disponible",
         studentName: loan.estudiante?.user?.nombreCompleto || "Estudiante no disponible",
         dueDate: String(loan.fechaLimiteDevolucion).slice(0, 10),
         loanDate: String(loan.fechaPrestamo).slice(0, 10),
         status: loan.estado,
       }));
-
       setLoans(mappedLoans);
       setBooks((booksData as any[]).map((book) => ({ id: book.id, titulo: book.titulo, cantidadDisponible: book.cantidadDisponible, estado: book.estado })));
       setStudents((usersData as any[]).filter((user) => user.rol === "estudiante").map((user) => ({ id: user.id, nombreCompleto: user.nombreCompleto, rol: user.rol })));
@@ -77,18 +58,13 @@ export const BookReservationsManagementPage = () => {
 
   const filteredLoans = loans.filter((loan) =>
     loan.bookTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loan.studentName.toLowerCase().includes(searchTerm.toLowerCase()),
+    loan.studentName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenDialog = (loan?: LoanRecord) => {
     if (loan) {
       setEditingLoan(loan);
-      setFormData({
-        libroId: String(loan.libroId),
-        estudianteId: String(loan.estudianteId),
-        fechaLimiteDevolucion: loan.dueDate,
-        estado: loan.status,
-      });
+      setFormData({ libroId: String(loan.libroId), estudianteId: String(loan.estudianteId), fechaLimiteDevolucion: loan.dueDate, estado: loan.status });
     } else {
       setEditingLoan(null);
       setFormData({ libroId: "", estudianteId: "", fechaLimiteDevolucion: "", estado: "ACTIVO" });
@@ -97,22 +73,12 @@ export const BookReservationsManagementPage = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.libroId || !formData.estudianteId || !formData.fechaLimiteDevolucion) {
-      toast.error("Completa todos los campos");
-      return;
-    }
+    if (!formData.libroId || !formData.estudianteId || !formData.fechaLimiteDevolucion) { toast.error("Completa todos los campos"); return; }
     try {
       setSaving(true);
-      const basePayload = {
-        libroId: Number(formData.libroId),
-        estudianteId: Number(formData.estudianteId),
-        fechaLimiteDevolucion: formData.fechaLimiteDevolucion,
-      };
+      const basePayload = { libroId: Number(formData.libroId), estudianteId: Number(formData.estudianteId), fechaLimiteDevolucion: formData.fechaLimiteDevolucion };
       if (editingLoan) {
-        await api.updateLoan(editingLoan.id, {
-          ...basePayload,
-          estado: formData.estado,
-        });
+        await api.updateLoan(editingLoan.id, { ...basePayload, estado: formData.estado });
         toast.success("Reserva de libro actualizada exitosamente");
       } else {
         await api.createLoan(basePayload);
@@ -144,10 +110,8 @@ export const BookReservationsManagementPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
-      <main className="ml-64 pt-[4.5rem] px-6 pb-6">
+    <PageLayout>
+      <div className="px-6 pb-6 pt-6">
         <div className="mb-6"><h1 className="text-3xl font-bold text-gray-900">Reservas de Libro</h1></div>
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1">
@@ -202,7 +166,7 @@ export const BookReservationsManagementPage = () => {
             <DialogFooter><Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancelar</Button><Button onClick={handleDelete} disabled={saving} className="bg-red-600 hover:bg-red-700">{saving ? "Eliminando..." : "Eliminar"}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };

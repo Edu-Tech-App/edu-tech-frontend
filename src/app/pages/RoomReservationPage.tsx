@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Sidebar } from "../components/Sidebar";
-import { TopBar } from "../components/TopBar";
+import { PageLayout } from "../components/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Calendar } from "../components/ui/calendar";
@@ -20,20 +19,10 @@ export const RoomReservationPage = () => {
     { id: 'R201', name: 'Sala de Conferencias 201', capacity: 10 },
   ];
 
-  const timeSlots = [
-    '08:00 - 10:00',
-    '10:00 - 12:00',
-    '12:00 - 14:00',
-    '14:00 - 16:00',
-    '16:00 - 18:00',
-    '18:00 - 20:00',
-  ];
+  const timeSlots = ['08:00 - 10:00', '10:00 - 12:00', '12:00 - 14:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00'];
 
   const handleReserve = () => {
-    if (!room || !timeSlot || !date) {
-      toast.error('Por favor selecciona una sala, horario y fecha');
-      return;
-    }
+    if (!room || !timeSlot || !date) { toast.error('Por favor selecciona una sala, horario y fecha'); return; }
     setShowConfirmDialog(true);
   };
 
@@ -45,75 +34,39 @@ export const RoomReservationPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
-      <main className="ml-64 pt-16 p-6">
+    <PageLayout>
+      <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Reservar Sala de Estudio</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Reservar Sala de Estudio</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
-                <p className="text-sm text-blue-800">
-                  💡 Selecciona la fecha, sala y horario para hacer tu reserva.
-                </p>
+                <p className="text-sm text-blue-800">💡 Selecciona la fecha, sala y horario para hacer tu reserva.</p>
               </div>
-
               <div>
                 <label className="text-sm font-medium mb-2 block">Selecciona la Fecha</label>
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-md border"
-                  disabled={(date) => date < new Date()}
-                />
+                <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" disabled={(date) => date < new Date()} />
               </div>
-
               <div>
                 <label className="text-sm font-medium mb-2 block">Selecciona la Sala</label>
                 <Select value={room} onValueChange={setRoom}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Elige una sala" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name} (Capacidad: {r.capacity} personas)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Elige una sala" /></SelectTrigger>
+                  <SelectContent>{rooms.map((r) => <SelectItem key={r.id} value={r.id}>{r.name} (Capacidad: {r.capacity} personas)</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-
               <div>
                 <label className="text-sm font-medium mb-2 block">Selecciona el Horario</label>
                 <Select value={timeSlot} onValueChange={setTimeSlot}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Elige un horario" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((slot) => (
-                      <SelectItem key={slot} value={slot}>
-                        {slot}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Elige un horario" /></SelectTrigger>
+                  <SelectContent>{timeSlots.map((slot) => <SelectItem key={slot} value={slot}>{slot}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-
-              <Button onClick={handleReserve} className="w-full bg-blue-900 hover:bg-blue-800">
-                Reservar Sala
-              </Button>
+              <Button onClick={handleReserve} className="w-full bg-blue-900 hover:bg-blue-800">Reservar Sala</Button>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Mis Reservas</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Mis Reservas</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {[
@@ -123,9 +76,7 @@ export const RoomReservationPage = () => {
                   <div key={idx} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="font-medium text-gray-800">{reservation.room}</p>
                     <p className="text-sm text-gray-600">{reservation.date} · {reservation.time}</p>
-                    <Button size="sm" variant="destructive" className="mt-2">
-                      Cancelar Reserva
-                    </Button>
+                    <Button size="sm" variant="destructive" className="mt-2">Cancelar Reserva</Button>
                   </div>
                 ))}
               </div>
@@ -137,9 +88,7 @@ export const RoomReservationPage = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirmar Reserva</DialogTitle>
-              <DialogDescription>
-                Por favor confirma los detalles de tu reserva
-              </DialogDescription>
+              <DialogDescription>Por favor confirma los detalles de tu reserva</DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-2">
               <p className="text-sm"><span className="font-medium">Sala:</span> {rooms.find(r => r.id === room)?.name}</p>
@@ -147,16 +96,12 @@ export const RoomReservationPage = () => {
               <p className="text-sm"><span className="font-medium">Horario:</span> {timeSlot}</p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={confirmReservation} className="bg-blue-900 hover:bg-blue-800">
-                Confirmar Reserva
-              </Button>
+              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>Cancelar</Button>
+              <Button onClick={confirmReservation} className="bg-blue-900 hover:bg-blue-800">Confirmar Reserva</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };

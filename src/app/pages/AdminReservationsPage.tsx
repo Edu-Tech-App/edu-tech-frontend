@@ -1,5 +1,4 @@
-import { Sidebar } from "../components/Sidebar";
-import { TopBar } from "../components/TopBar";
+import { PageLayout } from "../components/PageLayout";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { DoorOpen, Library, Clock, CheckCircle, XCircle } from "lucide-react";
@@ -24,26 +23,20 @@ export const AdminReservationsPage = () => {
           api.getRoomReservations(),
           api.getLoans(),
         ]);
-
         const allStatuses = [...(roomReservations as SummaryReservation[]), ...(bookReservations as SummaryReservation[])].map((item) => item.estado);
-        setActiveCount(allStatuses.filter((status) => status === "ACTIVA" || status === "ACTIVO").length);
-        setCompletedCount(allStatuses.filter((status) => status === "COMPLETADA" || status === "DEVUELTO").length);
-        setCancelledCount(allStatuses.filter((status) => status === "CANCELADA" || status === "PERDIDO" || status === "VENCIDO").length);
+        setActiveCount(allStatuses.filter((s) => s === "ACTIVA" || s === "ACTIVO").length);
+        setCompletedCount(allStatuses.filter((s) => s === "COMPLETADA" || s === "DEVUELTO").length);
+        setCancelledCount(allStatuses.filter((s) => s === "CANCELADA" || s === "PERDIDO" || s === "VENCIDO").length);
       } catch {
-        setActiveCount(0);
-        setCompletedCount(0);
-        setCancelledCount(0);
+        setActiveCount(0); setCompletedCount(0); setCancelledCount(0);
       }
     };
-
     void loadSummary();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <TopBar />
-      <main className="ml-64 pt-[4.5rem] px-6 pb-6">
+    <PageLayout>
+      <div className="px-6 pb-6 pt-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Reservas</h1>
         </div>
@@ -62,12 +55,9 @@ export const AdminReservationsPage = () => {
                 <h2 className="text-xl font-semibold text-gray-900">Reservas de Sala</h2>
               </div>
               <p className="mb-6 text-gray-600">CRUD completo para reservas de salas de estudio.</p>
-              <Button onClick={() => navigate("/reservations/rooms")} className="bg-blue-900 hover:bg-blue-800">
-                Ir a Reservas de Sala
-              </Button>
+              <Button onClick={() => navigate("/reservations/rooms")} className="bg-blue-900 hover:bg-blue-800">Ir a Reservas de Sala</Button>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-center gap-3">
@@ -75,13 +65,11 @@ export const AdminReservationsPage = () => {
                 <h2 className="text-xl font-semibold text-gray-900">Reservas de Libro</h2>
               </div>
               <p className="mb-6 text-gray-600">CRUD completo para préstamos o reservas de libros.</p>
-              <Button onClick={() => navigate("/reservations/books")} className="bg-blue-900 hover:bg-blue-800">
-                Ir a Reservas de Libro
-              </Button>
+              <Button onClick={() => navigate("/reservations/books")} className="bg-blue-900 hover:bg-blue-800">Ir a Reservas de Libro</Button>
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageLayout>
   );
 };

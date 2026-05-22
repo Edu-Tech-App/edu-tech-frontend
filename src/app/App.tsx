@@ -1,7 +1,11 @@
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
-import { api } from "../services/api";
+import { ThemeProvider } from "./context/ThemeContext";
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  );
 }

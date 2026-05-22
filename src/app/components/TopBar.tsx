@@ -1,235 +1,206 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Bell, User, BookOpen, DoorOpen, DollarSign, AlertCircle, CheckCircle, Menu, Sun, Moon, Settings } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { Bell, User, BookOpen, DoorOpen, DollarSign, AlertCircle, CheckCircle } from "lucide-react";
-import { Badge } from "./ui/badge";
+import { api } from "../../services/api";
+import { useTheme } from "../context/ThemeContext";
+import { EditProfileModal } from "./EditProfileModal";
 
 interface Notification {
-  id: string;
-  type: 'warning' | 'success' | 'info' | 'error';
-  title: string;
+  id: number;
+  type: "loan" | "fine" | "reservation" | "room";
   message: string;
-  icon: React.ReactNode;
-  time: string;
-  isRead: boolean;
+  read: boolean;
+  icon: "BookOpen" | "DollarSign" | "CalendarCheck" | "DoorOpen";
 }
 
-export const TopBar = () => {
-  const { user } = useAuth();
+interface TopBarProps {
+  onMenuToggle: () => void;
+}
+
+const iconMap: Record<Notification["icon"], React.ReactNode> = {
+  BookOpen: <BookOpen size={16} />,
+  DollarSign: <DollarSign size={16} />,
+  CalendarCheck: <CheckCircle size={16} />,
+  DoorOpen: <DoorOpen size={16} />,
+};
+
+export const TopBar = ({ onMenuToggle }: TopBarProps) => {
+  const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef<HTMLDivElement>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
 
-  const getNotificationsByRole = (): Notification[] => {
-    switch (user?.rol) {  // ✅ "rol" en vez de "role"
-      case 'estudiante':
-      case 'docente':
-        return [
-          {
-            id: '1',
-            type: 'warning',
-            title: 'Préstamo por vencer',
-            message: 'El libro "Introducción a los Algoritmos" vence mañana',
-            icon: <BookOpen size={20} className="text-yellow-600" />,
-            time: 'Hace 2 horas',
-            isRead: false,
-          },
-          {
-            id: '2',
-            type: 'success',
-            title: 'Reserva aprobada',
-            message: 'Tu reserva de Sala A para el 26/04 fue aprobada',
-            icon: <CheckCircle size={20} className="text-green-600" />,
-            time: 'Hace 3 horas',
-            isRead: false,
-          },
-          {
-            id: '3',
-            type: 'error',
-            title: 'Multa pendiente',
-            message: 'Tienes una multa de $6 por pagar',
-            icon: <DollarSign size={20} className="text-red-600" />,
-            time: 'Hace 5 horas',
-            isRead: true,
-          },
-          {
-            id: '4',
-            type: 'info',
-            title: 'Nuevo material disponible',
-            message: 'Se agregaron 5 libros nuevos de tu categoría favorita',
-            icon: <BookOpen size={20} className="text-blue-600" />,
-            time: 'Hace 1 día',
-            isRead: true,
-          },
-        ];
-
-      case 'bibliotecario':
-        return [
-          {
-            id: '1',
-            type: 'warning',
-            title: 'Reserva pendiente',
-            message: '3 reservas de salas esperan aprobación',
-            icon: <DoorOpen size={20} className="text-yellow-600" />,
-            time: 'Hace 1 hora',
-            isRead: false,
-          },
-          {
-            id: '2',
-            type: 'error',
-            title: 'Préstamo vencido',
-            message: 'Juan Pérez tiene un libro vencido hace 3 días',
-            icon: <AlertCircle size={20} className="text-red-600" />,
-            time: 'Hace 2 horas',
-            isRead: false,
-          },
-        ];
-
-      case 'administrativo':
-        return [
-          {
-            id: '1',
-            type: 'warning',
-            title: 'Reservas pendientes',
-            message: '5 reservas de salas esperan aprobación',
-            icon: <DoorOpen size={20} className="text-yellow-600" />,
-            time: 'Hace 30 min',
-            isRead: false,
-          },
-          {
-            id: '2',
-            type: 'error',
-            title: 'Multas sin cobrar',
-            message: '$340 en multas pendientes de cobro',
-            icon: <DollarSign size={20} className="text-red-600" />,
-            time: 'Hace 1 hora',
-            isRead: false,
-          },
-          {
-            id: '3',
-            type: 'info',
-            title: 'Reporte mensual',
-            message: 'Reporte de actividad de abril disponible',
-            icon: <BookOpen size={20} className="text-blue-600" />,
-            time: 'Hace 2 horas',
-            isRead: true,
-          },
-        ];
-
-      default:
-        return [];
+  // Cargar foto de perfil
+  useEffect(() => {
+    if (user?.id) {
+      const saved = localStorage.getItem(`profilePhoto_${user.id}`);
+      if (saved) setProfilePhoto(saved);
     }
-  };
-
-  const notifications = getNotificationsByRole();
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  }, [user?.id, showEditProfile]); // se recarga al cerrar el modal
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
+    const buildNotifications = async () => {
+      const list: Notification[] = [];
+      try {
+        if (user?.rol === "estudiante" || user?.rol === "docente") {
+          const loans = await api.getMyLoans?.();
+          if (loans?.some((l: any) => l.estado === "VENCIDO")) {
+            list.push({ id: 1, type: "loan", message: "Tienes préstamos vencidos pendientes", read: false, icon: "BookOpen" });
+          }
+          const fines = await api.getMyFines?.();
+          if (fines?.some((f: any) => f.estado === "PENDIENTE")) {
+            list.push({ id: 2, type: "fine", message: "Tienes multas pendientes por pagar", read: false, icon: "DollarSign" });
+          }
+        }
+      } catch {
+        // silencioso
       }
+      setNotifications(list);
     };
-    if (showNotifications) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications]);
+    void buildNotifications();
+  }, [user]);
 
-  const getNotificationBgColor = (type: string) => {
-    switch (type) {
-      case 'warning': return 'bg-yellow-50 border-yellow-200';
-      case 'success': return 'bg-green-50 border-green-200';
-      case 'error': return 'bg-red-50 border-red-200';
-      case 'info': return 'bg-blue-50 border-blue-200';
-      default: return 'bg-gray-50 border-gray-200';
-    }
-  };
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setShowUserMenu(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
   return (
-    <div className="h-16 bg-white border-b border-gray-200 fixed top-0 right-0 left-64 z-10 flex items-center justify-between px-6">
-      <div>
-        {/* ✅ "nombreCompleto" en vez de "name", "rol" en vez de "role" */}
-        <h2 className="text-xl font-semibold text-gray-800">Bienvenido, {user?.nombreCompleto}</h2>
-        <p className="text-sm text-gray-500 capitalize">{user?.rol}</p>
-      </div>
+    <>
+      <div className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 fixed top-0 right-0 left-0 lg:left-64 z-20 flex items-center justify-between px-4 lg:px-6 transition-colors">
 
-      <div className="flex items-center gap-4">
-        <div className="relative" ref={notificationRef}>
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Bell size={20} className="text-gray-600" />
-            {unreadCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 bg-red-500 text-white px-1.5 py-0.5 text-xs">
-                {unreadCount}
-              </Badge>
-            )}
+        {/* Izquierda */}
+        <div className="flex items-center gap-3">
+          <button onClick={onMenuToggle} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Menu size={22} className="text-gray-600 dark:text-gray-300" />
+          </button>
+          <div>
+            <h2 className="text-base lg:text-xl font-semibold text-gray-800 dark:text-white leading-tight">
+              Bienvenido, {user?.nombreCompleto?.split(" ")[0]}
+            </h2>
+            <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 capitalize">{user?.rol}</p>
+          </div>
+        </div>
+
+        {/* Derecha */}
+        <div className="flex items-center gap-2">
+
+          {/* Modo oscuro */}
+          <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            {isDark
+              ? <Sun size={20} className="text-yellow-400" />
+              : <Moon size={20} className="text-gray-600" />}
           </button>
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 max-h-[500px] overflow-hidden z-50">
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Notificaciones</h3>
-                {unreadCount > 0 && (
-                  <Badge className="bg-red-500 text-white">
-                    {unreadCount} nueva{unreadCount !== 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="overflow-y-auto max-h-[400px]">
-                {notifications.length > 0 ? (
-                  notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        !notification.isRead ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${getNotificationBgColor(notification.type)}`}>
-                          {notification.icon}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-1">
-                            <h4 className="font-medium text-sm text-gray-900">{notification.title}</h4>
-                            {!notification.isRead && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
-                          <p className="text-xs text-gray-500">{notification.time}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-gray-500">
-                    <Bell size={32} className="mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">No tienes notificaciones</p>
-                  </div>
-                )}
-              </div>
-
-              {notifications.length > 0 && (
-                <div className="p-3 border-t border-gray-200 text-center">
-                  <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    Ver todas las notificaciones
-                  </button>
-                </div>
+          {/* Campana */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => { setShowNotifications((p) => !p); setShowUserMenu(false); }}
+              className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Bell size={20} className="text-gray-600 dark:text-gray-300" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount}
+                </span>
               )}
-            </div>
-          )}
-        </div>
+            </button>
 
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-          <User size={20} className="text-gray-600" />
-          {/* ✅ "correoInstitucional" en vez de "email" */}
-          <span className="text-sm text-gray-700">{user?.correoInstitucional}</span>
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <span className="font-semibold text-gray-800 dark:text-white text-sm">Notificaciones</span>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} className="text-xs text-blue-600 hover:underline">
+                      Marcar todas como leídas
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center py-8 text-gray-400">
+                      <CheckCircle size={28} className="mb-2 text-green-400" />
+                      <p className="text-sm">Sin notificaciones</p>
+                    </div>
+                  ) : notifications.map((n) => (
+                    <div key={n.id} className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-700 ${!n.read ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
+                      <div className={`mt-0.5 ${n.type === "fine" ? "text-red-500" : "text-blue-500"}`}>
+                        {n.type === "fine" ? <AlertCircle size={16} /> : iconMap[n.icon]}
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{n.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Avatar / menú usuario */}
+          <div className="relative" ref={userRef}>
+            <button
+              onClick={() => { setShowUserMenu((p) => !p); setShowNotifications(false); }}
+              className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden">
+                {profilePhoto ? (
+                  <img src={profilePhoto} alt="Perfil" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={16} className="text-white" />
+                )}
+              </div>
+              <span className="hidden lg:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                {user?.nombreCompleto}
+              </span>
+            </button>
+
+            {showUserMenu && (
+              <div className="absolute right-0 top-12 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
+                {/* Info usuario */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Perfil" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={18} className="text-white" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{user?.nombreCompleto}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.rol}</p>
+                  </div>
+                </div>
+
+                {/* Editar perfil */}
+                <button
+                  onClick={() => { setShowUserMenu(false); setShowEditProfile(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Settings size={16} />
+                  Editar Perfil
+                </button>
+
+
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de editar perfil */}
+      <EditProfileModal open={showEditProfile} onClose={() => setShowEditProfile(false)} />
+    </>
   );
 };
+
