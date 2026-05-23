@@ -118,7 +118,7 @@ export const EditProfileModal = ({ open, onClose }: EditProfileModalProps) => {
           {/* Foto de perfil */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-blue-900 flex items-center justify-center overflow-hidden">
+              <div className="w-20 h-20 rounded-full bg-[#6C5CE7] flex items-center justify-center overflow-hidden">
                 {photo ? (
                   <img src={photo} alt="Perfil" className="w-full h-full object-cover" />
                 ) : (
@@ -127,7 +127,7 @@ export const EditProfileModal = ({ open, onClose }: EditProfileModalProps) => {
               </div>
               <button
                 onClick={() => fileRef.current?.click()}
-                className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
+                className="absolute bottom-0 right-0 w-7 h-7 bg-[#6C5CE7] rounded-full flex items-center justify-center hover:bg-[#5b4bd1] transition-colors"
               >
                 <Camera size={14} className="text-white" />
               </button>
@@ -209,7 +209,7 @@ export const EditProfileModal = ({ open, onClose }: EditProfileModalProps) => {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-900 hover:bg-blue-800">
+          <Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
             {saving ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </DialogFooter>

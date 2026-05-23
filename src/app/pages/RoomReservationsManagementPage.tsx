@@ -11,6 +11,7 @@ import { Label } from "../components/ui/label";
 import { Search, XCircle, CheckCircle, Clock, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 type ReservationStatus = "ACTIVA" | "COMPLETADA" | "CANCELADA";
 
@@ -182,7 +183,7 @@ export const RoomReservationsManagementPage = () => {
 
   const getStatusBadge = (status: ReservationRecord["status"]) => {
     switch (status) {
-      case "active": return <Badge className="bg-blue-500">Activa</Badge>;
+      case "active": return <Badge className="bg-[#6C5CE7]/80">Activa</Badge>;
       case "completed": return <Badge className="bg-green-500">Completada</Badge>;
       case "cancelled": return <Badge className="bg-red-500">Cancelada</Badge>;
       default: return <Badge>{status}</Badge>;
@@ -190,16 +191,17 @@ export const RoomReservationsManagementPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-[4.5rem] px-6 pb-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Reservas de Salas</h1>
+      <main className="lg:ml-64 pt-[4.5rem]">
+        <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Gestión de Reservas de Salas</h1>
         </div>
 
         <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-3">
-          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Activas</p><p className="text-3xl font-bold text-blue-600">{activeCount}</p></div><Clock size={40} className="text-blue-600" /></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Activas</p><p className="text-3xl font-bold text-[#6C5CE7]">{activeCount}</p></div><Clock size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Completadas</p><p className="text-3xl font-bold text-green-600">{completedCount}</p></div><CheckCircle size={40} className="text-green-600" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Canceladas</p><p className="text-3xl font-bold text-red-600">{cancelledCount}</p></div><XCircle size={40} className="text-red-600" /></div></CardContent></Card>
         </div>
@@ -211,47 +213,51 @@ export const RoomReservationsManagementPage = () => {
           </div>
           <div className="w-48">
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]">
               <option value="all">Todos los estados</option>
               <option value="active">Activas</option>
               <option value="completed">Completadas</option>
               <option value="cancelled">Canceladas</option>
             </select>
           </div>
-          <Button onClick={handleOpenCreateDialog} className="bg-blue-900 hover:bg-blue-800">
+          <Button onClick={handleOpenCreateDialog} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
             <Plus size={16} className="mr-2" />Crear Reserva
           </Button>
         </div>
 
-        <Card>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="p-3 text-left">Sala</th>
-                    <th className="p-3 text-left">Usuario</th>
-                    <th className="p-3 text-left">Rol</th>
-                    <th className="p-3 text-left">Fecha</th>
-                    <th className="p-3 text-left">Horario</th>
-                    <th className="p-3 text-left">Estado</th>
-                    <th className="p-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-gray-500">Cargando reservas...</td></tr>
-                  ) : filteredReservations.length === 0 ? (
-                    <tr><td colSpan={7} className="p-8 text-center text-gray-500">No se encontraron reservas</td></tr>
+        <Card className="mt-1 border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            {loading ? (
+              <p className="py-8 text-center text-gray-500 dark:text-gray-400">Cargando reservas...</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="dark:border-gray-700">
+                    <TableHead className="dark:text-gray-300">Sala</TableHead>
+                    <TableHead className="dark:text-gray-300">Usuario</TableHead>
+                    <TableHead className="dark:text-gray-300">Rol</TableHead>
+                    <TableHead className="dark:text-gray-300">Fecha</TableHead>
+                    <TableHead className="dark:text-gray-300">Horario</TableHead>
+                    <TableHead className="dark:text-gray-300">Estado</TableHead>
+                    <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReservations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No se encontraron reservas
+                      </TableCell>
+                    </TableRow>
                   ) : filteredReservations.map((reservation) => (
-                    <tr key={reservation.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{reservation.roomName}</td>
-                      <td className="p-3 text-gray-600">{reservation.userName}</td>
-                      <td className="p-3 text-gray-600">{reservation.userRole}</td>
-                      <td className="p-3 text-gray-600">{new Date(reservation.date).toLocaleDateString("es-ES")}</td>
-                      <td className="p-3 text-gray-600">{reservation.startTime} - {reservation.endTime}</td>
-                      <td className="p-3">{getStatusBadge(reservation.status)}</td>
-                      <td className="p-3">
+                    <TableRow key={reservation.id} className="hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                      <TableCell className="font-medium dark:text-white">{reservation.roomName}</TableCell>
+                      <TableCell className="dark:text-gray-400">{reservation.userName}</TableCell>
+                      <TableCell className="dark:text-gray-400">{reservation.userRole}</TableCell>
+                      <TableCell className="dark:text-gray-400">{new Date(reservation.date).toLocaleDateString("es-ES")}</TableCell>
+                      <TableCell className="dark:text-gray-400">{reservation.startTime} - {reservation.endTime}</TableCell>
+                      <TableCell>{getStatusBadge(reservation.status)}</TableCell>
+                      <TableCell>
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost" onClick={() => handleOpenEditDialog(reservation)}><Edit size={16} /></Button>
                           {reservation.status === "active" && (
@@ -263,13 +269,13 @@ export const RoomReservationsManagementPage = () => {
                             <Trash2 size={16} className="text-red-600" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </Card>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
@@ -315,7 +321,7 @@ export const RoomReservationsManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancelar</Button>
-              <Button onClick={handleSaveReservation} disabled={saving} className="bg-blue-900 hover:bg-blue-800">
+              <Button onClick={handleSaveReservation} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
                 {saving ? "Guardando..." : editingReservation ? "Guardar Cambios" : "Crear Reserva"}
               </Button>
             </DialogFooter>
@@ -347,6 +353,7 @@ export const RoomReservationsManagementPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </main>
     </div>
   );

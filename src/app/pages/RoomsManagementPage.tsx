@@ -10,6 +10,7 @@ import { Label } from "../components/ui/label";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 interface RoomRecord {
   id: number;
@@ -103,58 +104,63 @@ export const RoomsManagementPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-[4.5rem] px-6 pb-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Salas</h1>
+      <main className="lg:ml-64 pt-[4.5rem]">
+        <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Salas</h1>
         </div>
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <Input placeholder="Buscar por nombre o ubicación..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400" />
           </div>
-          <Button onClick={() => handleOpenDialog()} className="bg-blue-900 hover:bg-blue-800">
+          <Button onClick={() => handleOpenDialog()} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
             <Plus size={16} className="mr-2" />Crear Sala
           </Button>
         </div>
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b dark:border-gray-700">
-                    <th className="p-3 text-left dark:text-gray-300">Nombre</th>
-                    <th className="p-3 text-left dark:text-gray-300">Capacidad</th>
-                    <th className="p-3 text-left dark:text-gray-300">Ubicación</th>
-                    <th className="p-3 text-left dark:text-gray-300">Estado</th>
-                    <th className="p-3 text-right dark:text-gray-300">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400">Cargando salas...</td></tr>
-                  ) : filteredRooms.length === 0 ? (
-                    <tr><td colSpan={5} className="p-8 text-center text-gray-500 dark:text-gray-400">No se encontraron salas</td></tr>
+        <Card className="mt-1 border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            {loading ? (
+              <p className="py-8 text-center text-gray-500 dark:text-gray-400">Cargando salas...</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="dark:border-gray-700">
+                    <TableHead className="dark:text-gray-300">Nombre</TableHead>
+                    <TableHead className="dark:text-gray-300">Capacidad</TableHead>
+                    <TableHead className="dark:text-gray-300">Ubicación</TableHead>
+                    <TableHead className="dark:text-gray-300">Estado</TableHead>
+                    <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRooms.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No se encontraron salas
+                      </TableCell>
+                    </TableRow>
                   ) : filteredRooms.map((room) => (
-                    <tr key={room.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="p-3 font-medium dark:text-white">{room.nombre}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{room.capacidad}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{room.ubicacion}</td>
-                      <td className="p-3 text-gray-600 dark:text-gray-400">{STATUS_OPTIONS.find((s) => s.value === room.estado)?.label || room.estado}</td>
-                      <td className="p-3">
+                    <TableRow key={room.id} className="hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                      <TableCell className="font-medium dark:text-white">{room.nombre}</TableCell>
+                      <TableCell className="dark:text-gray-400">{room.capacidad}</TableCell>
+                      <TableCell className="dark:text-gray-400">{room.ubicacion}</TableCell>
+                      <TableCell className="dark:text-gray-400">{STATUS_OPTIONS.find((s) => s.value === room.estado)?.label || room.estado}</TableCell>
+                      <TableCell>
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost" onClick={() => handleOpenDialog(room)}><Edit size={16} /></Button>
                           <Button size="sm" variant="ghost" onClick={() => { setRoomToDelete(room); setShowDeleteDialog(true); }}><Trash2 size={16} className="text-red-600" /></Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </Card>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
@@ -177,7 +183,7 @@ export const RoomsManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowFormDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleSaveRoom} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : "Guardar"}</Button>
+              <Button onClick={handleSaveRoom} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : "Guardar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -194,6 +200,7 @@ export const RoomsManagementPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </main>
     </div>
   );

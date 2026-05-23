@@ -7,7 +7,7 @@ export const TeacherDashboard = () => {
   const navigate = useNavigate();
 
   const stats = [
-    { title: 'Assigned Subjects', value: '3', icon: BookOpen, color: 'bg-blue-100 text-blue-600' },
+    { title: 'Assigned Subjects', value: '3', icon: BookOpen, color: 'bg-[#6C5CE7]/14 text-[#6C5CE7]' },
     { title: 'Pending Grades', value: '12', icon: ClipboardList, color: 'bg-orange-100 text-orange-600' },
     { title: 'Reservations', value: '1', icon: Calendar, color: 'bg-purple-100 text-purple-600' }
   ];

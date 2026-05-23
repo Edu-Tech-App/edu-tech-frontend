@@ -7,7 +7,7 @@ const stats = [
     value: "12,458",
     change: "+234 this month",
     icon: BookOpen,
-    color: "bg-blue-500",
+    color: "bg-[#6C5CE7]/80",
   },
   {
     title: "Active Members",

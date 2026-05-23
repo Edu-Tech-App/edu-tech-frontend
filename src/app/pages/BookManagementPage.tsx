@@ -8,6 +8,7 @@ import { Plus, Edit, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { api, API_URL_PUBLIC, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 interface Book {
   id: number;
@@ -136,9 +137,9 @@ export const BookManagementPage = () => {
 
   return (
     <PageLayout>
-      <div className="px-6 pb-6 pt-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Libros</h1>
+      <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Gestión de Libros</h1>
         </div>
 
         <div className="flex gap-4 mb-6">
@@ -146,49 +147,57 @@ export const BookManagementPage = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input placeholder="Buscar por título, autor o categoría..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
-          <Button onClick={() => handleOpenDialog()} className="bg-blue-900 hover:bg-blue-800"><Plus size={20} className="mr-2" />Agregar Libro</Button>
+          <Button onClick={() => handleOpenDialog()} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"><Plus size={20} className="mr-2" />Agregar Libro</Button>
         </div>
 
-        <Card>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3">Título</th>
-                    <th className="text-left p-3">Autor</th>
-                    <th className="text-left p-3">Categoría</th>
-                    <th className="text-left p-3">Editorial</th>
-                    <th className="text-center p-3">Copias</th>
-                    <th className="text-left p-3">Estado</th>
-                    <th className="text-right p-3">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={7} className="p-6 text-center text-gray-500">Cargando libros...</td></tr>
-                  ) : filteredBooks.length === 0 ? (
-                    <tr><td colSpan={7} className="p-6 text-center text-gray-500">No hay libros registrados con esos criterios.</td></tr>
+        <Card className="mt-1 border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            {loading ? (
+              <p className="py-8 text-center text-gray-500 dark:text-gray-400">Cargando libros...</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="dark:border-gray-700">
+                    <TableHead className="dark:text-gray-300">Título</TableHead>
+                    <TableHead className="dark:text-gray-300">Autor</TableHead>
+                    <TableHead className="dark:text-gray-300">Categoría</TableHead>
+                    <TableHead className="dark:text-gray-300">Editorial</TableHead>
+                    <TableHead className="text-center dark:text-gray-300">Copias</TableHead>
+                    <TableHead className="dark:text-gray-300">Estado</TableHead>
+                    <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBooks.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No hay libros registrados con esos criterios.
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     filteredBooks.map((book) => (
-                      <tr key={book.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-medium">{book.titulo}</td>
-                        <td className="p-3 text-gray-600">{book.autor}</td>
-                        <td className="p-3 text-gray-600">{formatCategory(book.categoria)}</td>
-                        <td className="p-3 text-gray-600">{book.editorial || "Sin editorial"}</td>
-                        <td className="p-3 text-center text-gray-600">{book.cantidadDisponible}</td>
-                        <td className="p-3"><span className={`px-2 py-1 rounded-full text-sm ${getStatusClass(book.estado)}`}>{formatStatus(book.estado)}</span></td>
-                        <td className="p-3"><div className="flex gap-2 justify-end">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(book)}><Edit size={16} /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(book)}><Trash2 size={16} className="text-red-600" /></Button>
-                        </div></td>
-                      </tr>
+                      <TableRow key={book.id} className="hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                        <TableCell className="font-medium dark:text-white">{book.titulo}</TableCell>
+                        <TableCell className="dark:text-gray-400">{book.autor}</TableCell>
+                        <TableCell className="dark:text-gray-400">{formatCategory(book.categoria)}</TableCell>
+                        <TableCell className="dark:text-gray-400">{book.editorial || "Sin editorial"}</TableCell>
+                        <TableCell className="text-center dark:text-gray-400">{book.cantidadDisponible}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-sm ${getStatusClass(book.estado)}`}>{formatStatus(book.estado)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(book)}><Edit size={16} /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(book)}><Trash2 size={16} className="text-red-600" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </Card>
 
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -246,7 +255,7 @@ export const BookManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
-              <Button onClick={handleSaveBook} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : editingBook ? 'Guardar Cambios' : 'Crear Libro'}</Button>
+              <Button onClick={handleSaveBook} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : editingBook ? 'Guardar Cambios' : 'Crear Libro'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -178,12 +178,13 @@ export const SubjectsPage = () => {
   const creditOptions = Array.from({ length: 5 }, (_, i) => i + 1);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-[4.5rem] px-5 pb-8 md:px-6">
-        <div className="mb-6 mt-1">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+      <main className="lg:ml-64 pt-[4.5rem]">
+        <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">
             {user?.rol === "estudiante" ? "Mis Materias" : user?.rol === "administrativo" ? "Gestión de Materias" : "Materias Asignadas"}
           </h1>
         </div>
@@ -194,14 +195,14 @@ export const SubjectsPage = () => {
             <Input placeholder="Buscar materias..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400" />
           </div>
           {user?.rol === "administrativo" && (
-            <Button onClick={() => handleOpenDialog()} className="bg-blue-900 hover:bg-blue-800">
+            <Button onClick={() => handleOpenDialog()} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
               <Plus size={16} className="mr-2" />Crear Materia
             </Button>
           )}
         </div>
 
-        <Card className="mt-1 dark:bg-gray-800 dark:border-gray-700">
-          <CardContent className="pb-8">
+        <Card className="mt-1 border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800">
+          <div>
             {loading ? (
               <p className="text-center text-gray-500 dark:text-gray-400 py-8">Cargando materias...</p>
             ) : (
@@ -243,7 +244,7 @@ export const SubjectsPage = () => {
                         {user?.rol === "administrativo" ? (
                           <div className="flex gap-2">
                             <Button size="sm" variant="ghost" onClick={() => handleOpenDialog(subject)}><Edit size={16} /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleOpenAssignTeacherDialog(subject)}><UserPlus size={16} className="text-blue-700" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleOpenAssignTeacherDialog(subject)}><UserPlus size={16} className="text-[#6C5CE7]" /></Button>
                             <Button size="sm" variant="ghost" onClick={() => { setSubjectToDelete(subject); setShowDeleteDialog(true); }}><Trash2 size={16} className="text-red-600" /></Button>
                           </div>
                         ) : user?.rol === "estudiante" ? (
@@ -260,7 +261,7 @@ export const SubjectsPage = () => {
                 </TableBody>
               </Table>
             )}
-          </CardContent>
+          </div>
         </Card>
 
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -304,7 +305,7 @@ export const SubjectsPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleSaveSubject} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : editingSubject ? "Guardar Cambios" : "Crear Materia"}</Button>
+              <Button onClick={handleSaveSubject} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : editingSubject ? "Guardar Cambios" : "Crear Materia"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -329,7 +330,7 @@ export const SubjectsPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowAssignTeacherDialog(false)} className="mr-auto dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleAssignTeacher} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : "Guardar Asignación"}</Button>
+              <Button onClick={handleAssignTeacher} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : "Guardar Asignación"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -346,6 +347,7 @@ export const SubjectsPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </main>
     </div>
   );

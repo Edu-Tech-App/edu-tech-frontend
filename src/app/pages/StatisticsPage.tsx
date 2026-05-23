@@ -36,43 +36,44 @@ export const StatisticsPage = () => {
   const librosPorCategoria = stats?.librosPorCategoria ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-16 p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Estadísticas del Sistema</h1>
-          <p className="text-gray-600 dark:text-gray-400">Panel general de métricas y análisis</p>
+      <main className="lg:ml-64 pt-16">
+        <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Estadísticas del Sistema</h1>
+          <p className="page-subtitle">Panel general de métricas y análisis</p>
         </div>
 
         {loading ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-16">Cargando estadísticas...</p>
+          <p className="py-16 text-center text-gray-500 dark:text-[#B6AFD8]">Cargando estadísticas...</p>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Total de Libros</p><p className="text-3xl font-bold text-blue-600">{stats?.totalLibros ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">En catálogo</p></div><BookOpen size={40} className="text-blue-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Usuarios Registrados</p><p className="text-3xl font-bold text-green-600">{stats?.totalUsuarios ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Total activos</p></div><Users size={40} className="text-green-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Préstamos Activos</p><p className="text-3xl font-bold text-purple-600">{stats?.prestamosActivos ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">En curso</p></div><Calendar size={40} className="text-purple-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Multas Pendientes</p><p className="text-3xl font-bold text-red-600">${stats?.multasPendientes ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Por cobrar</p></div><DollarSign size={40} className="text-red-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Materias Activas</p><p className="text-3xl font-bold text-yellow-600">{stats?.totalMaterias ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Este semestre</p></div><GraduationCap size={40} className="text-yellow-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-gray-400">Préstamos del Mes</p><p className="text-3xl font-bold text-indigo-600">{stats?.prestamosDelMes ?? 0}</p><p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Mes actual</p></div><TrendingUp size={40} className="text-indigo-600" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Total de Libros</p><p className="text-3xl font-bold text-[#6C5CE7]">{stats?.totalLibros ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">En catálogo</p></div><BookOpen size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Usuarios Registrados</p><p className="text-3xl font-bold text-green-600">{stats?.totalUsuarios ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Total activos</p></div><Users size={40} className="text-green-600" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Préstamos Activos</p><p className="text-3xl font-bold text-purple-600">{stats?.prestamosActivos ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">En curso</p></div><Calendar size={40} className="text-purple-600" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Multas Pendientes</p><p className="text-3xl font-bold text-red-600">${stats?.multasPendientes ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Por cobrar</p></div><DollarSign size={40} className="text-red-600" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Materias Activas</p><p className="text-3xl font-bold text-yellow-600">{stats?.totalMaterias ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Este semestre</p></div><GraduationCap size={40} className="text-yellow-600" /></div></CardContent></Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Préstamos del Mes</p><p className="text-3xl font-bold text-indigo-600">{stats?.prestamosDelMes ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Mes actual</p></div><TrendingUp size={40} className="text-indigo-600" /></div></CardContent></Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardHeader><CardTitle className="dark:text-white">Libros Más Prestados</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="section-title">Libros Más Prestados</CardTitle></CardHeader>
                 <CardContent>
                   {topLibros.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">No hay préstamos registrados</p>
+                    <p className="py-4 text-center text-sm text-gray-500 dark:text-[#B6AFD8]">No hay préstamos registrados</p>
                   ) : (
                     <div className="space-y-4">
                       {topLibros.map((book: any, index: number) => (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">{index + 1}</div>
+                            <div className="w-8 h-8 bg-[#6C5CE7]/14 dark:bg-[#6C5CE7]/30 rounded-full flex items-center justify-center text-[#6C5CE7] font-bold text-sm">{index + 1}</div>
                             <span className="font-medium text-sm dark:text-white">{book.titulo}</span>
                           </div>
-                          <span className="text-sm font-bold text-gray-600 dark:text-gray-400">{book.totalPrestamos} préstamos</span>
+                          <span className="text-sm font-bold text-gray-600 dark:text-[#D5D0EE]">{book.totalPrestamos} préstamos</span>
                         </div>
                       ))}
                     </div>
@@ -81,17 +82,17 @@ export const StatisticsPage = () => {
               </Card>
 
               <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardHeader><CardTitle className="dark:text-white">Distribución de Usuarios por Rol</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="section-title">Distribución de Usuarios por Rol</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {userStats.map((user, index) => (
                       <div key={index}>
                         <div className="flex justify-between mb-1">
                           <span className="text-sm font-medium dark:text-white">{user.role}</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{user.count} ({user.percentage}%)</span>
+                          <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{user.count} ({user.percentage}%)</span>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${user.percentage}%` }} />
+                          <div className="bg-[#6C5CE7] h-2 rounded-full" style={{ width: `${user.percentage}%` }} />
                         </div>
                       </div>
                     ))}
@@ -101,10 +102,10 @@ export const StatisticsPage = () => {
             </div>
 
             <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="dark:text-white">Libros por Categoría</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="section-title">Libros por Categoría</CardTitle></CardHeader>
               <CardContent>
                 {librosPorCategoria.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">No hay libros registrados por categoría</p>
+                  <p className="py-4 text-center text-sm text-gray-500 dark:text-[#B6AFD8]">No hay libros registrados por categoría</p>
                 ) : (
                   <div className="space-y-4">
                     {librosPorCategoria.map((cat: any, index: number) => {
@@ -114,7 +115,7 @@ export const StatisticsPage = () => {
                         <div key={index}>
                           <div className="flex justify-between mb-1">
                             <span className="text-sm font-medium dark:text-white">{cat.categoria || "Sin categoría"}</span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">{cat.total} libros</span>
+                            <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{cat.total} libros</span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div className="bg-green-600 h-2 rounded-full" style={{ width: `${percentage}%` }} />
@@ -128,6 +129,7 @@ export const StatisticsPage = () => {
             </Card>
           </>
         )}
+        </div>
       </main>
     </div>
   );

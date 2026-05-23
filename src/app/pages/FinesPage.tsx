@@ -50,21 +50,24 @@ export const FinesPage = () => {
 
   return (
     <PageLayout>
-      <div className="p-6">
+      <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Gestión de Multas</h1>
+        </div>
         <Card>
-          <CardHeader><CardTitle>Gestión de Multas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Resumen de Multas</CardTitle></CardHeader>
           <CardContent>
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">💡 <strong>Información:</strong> Las multas se calculan a $1.000 por día de retraso en la devolución de libros.</p>
+            <div className="mb-4 p-4 bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg">
+              <p className="text-sm text-[#5b4bd1]">💡 <strong>Información:</strong> Las multas se calculan a $1.000 por día de retraso en la devolución de libros.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm text-gray-600">Total de Multas Pendientes</p>
                 <p className="text-2xl font-bold text-yellow-700">${totalPendiente.toLocaleString()}</p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg p-4">
                 <p className="text-sm text-gray-600">Usuarios con Multas Pendientes</p>
-                <p className="text-2xl font-bold text-blue-700">{usuariosConMultas}</p>
+                <p className="text-2xl font-bold text-[#6C5CE7]">{usuariosConMultas}</p>
               </div>
             </div>
             {loading ? (

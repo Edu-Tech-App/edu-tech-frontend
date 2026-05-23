@@ -102,7 +102,7 @@ export const UserManagementPage = () => {
 
   const getRolColor = (rol: string) => {
     switch (rol) {
-      case "estudiante": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "estudiante": return "bg-[#6C5CE7]/14 text-[#5b4bd1] dark:bg-[#6C5CE7]/30 dark:text-[#d9d4ff]";
       case "docente": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
       case "bibliotecario": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
       case "administrativo": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
@@ -121,12 +121,13 @@ export const UserManagementPage = () => {
   const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-[4.5rem] px-6 pb-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Usuarios</h1>
+      <main className="lg:ml-64 pt-[4.5rem]">
+        <div className="page-shell">
+        <div className="page-header">
+          <h1 className="page-title">Gestión de Usuarios</h1>
         </div>
 
         <div className="flex gap-4 mb-6">
@@ -134,7 +135,7 @@ export const UserManagementPage = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <Input placeholder="Buscar usuarios..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400" />
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} className="bg-blue-900 hover:bg-blue-800">
+          <Button onClick={() => setShowCreateDialog(true)} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
             <Plus size={16} className="mr-2" />Crear Usuario
           </Button>
         </div>
@@ -196,7 +197,7 @@ export const UserManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleCreateUser} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Creando..." : "Crear Usuario"}</Button>
+              <Button onClick={handleCreateUser} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Creando..." : "Crear Usuario"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -229,7 +230,7 @@ export const UserManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowEditDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleUpdateUser} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : "Guardar Cambios"}</Button>
+              <Button onClick={handleUpdateUser} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : "Guardar Cambios"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -246,6 +247,7 @@ export const UserManagementPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </main>
     </div>
   );

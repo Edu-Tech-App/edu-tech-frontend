@@ -27,7 +27,7 @@ export function DashboardHeader() {
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage src="" />
-              <AvatarFallback className="bg-blue-600 text-white">
+              <AvatarFallback className="bg-[#6C5CE7] text-white">
                 <User className="w-5 h-5" />
               </AvatarFallback>
             </Avatar>

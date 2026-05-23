@@ -13,7 +13,7 @@ export const RoleSelectionPage = () => {
       icon: BookUser,
       title: 'Estudiante',
       description: 'Acceda a sus asignaturas, calificaciones y recursos de la biblioteca.',
-      color: 'bg-blue-600'
+      color: 'bg-[#6C5CE7]'
     },
     {
       role: 'teacher',
@@ -44,7 +44,7 @@ export const RoleSelectionPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#6C5CE7]/8 to-[#6C5CE7]/16 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Selecciona tu Rol</h1>

@@ -120,15 +120,19 @@ export const DashboardPage = () => {
   }, [user]);
 
   const cardClass = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700";
-  const titleClass = "text-sm text-gray-600 dark:text-gray-400";
-  const valueClass = "mt-2 text-3xl font-bold text-gray-800 dark:text-white";
-  const iconClass = "flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300";
-  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700 p-3";
+  const titleClass = "metric-label";
+  const valueClass = "mt-2 text-3xl font-bold text-gray-800 dark:text-[#F5F7FF]";
+  const iconClass = "flex h-12 w-12 items-center justify-center rounded-lg bg-[#6C5CE7]/14 dark:bg-gray-700/50 text-[#6C5CE7] dark:text-[#F5F7FF]";
+  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3";
 
   const renderAdmin = () => (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel Administrativo</h1>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+    <div className="page-shell space-y-6">
+      <div className="page-header">
+        <h1 className="page-title">Panel Administrativo</h1>
+        <p className="page-subtitle">Visibilidad central del sistema, recursos institucionales y actividad operativa en un solo lugar.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
           { title: "Usuarios", value: data.totalUsers, icon: Users },
           { title: "Libros", value: data.totalBooks, icon: Library },
@@ -139,9 +143,9 @@ export const DashboardPage = () => {
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <Card key={item.title} className={cardClass}>
+            <Card key={item.title} className={`${cardClass} overflow-hidden`}>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className={titleClass}>{item.title}</p>
                     <p className={valueClass}>{item.value}</p>
@@ -157,8 +161,10 @@ export const DashboardPage = () => {
   );
 
   const renderLibrarian = () => (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel de Biblioteca</h1>
+    <div className="page-shell space-y-6">
+      <div className="page-header">
+        <h1 className="page-title">Panel de Biblioteca</h1>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {[
           { title: "Préstamos Activos", value: data.activeLoansCount, icon: BookMarked },
@@ -183,17 +189,17 @@ export const DashboardPage = () => {
         })}
       </div>
       <Card className={cardClass}>
-        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Actividad reciente</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="section-title">Actividad reciente</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {data.recentLoans.length === 0
             ? <p className="text-gray-500 dark:text-gray-400">No hay movimientos recientes.</p>
             : data.recentLoans.map((loan: any) => (
               <div key={loan.id} className={`flex items-center justify-between ${sectionBg}`}>
                 <div>
-                  <p className="font-medium text-gray-700 dark:text-gray-200">{loan.libro?.titulo || "Libro"}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{loan.estudiante?.user?.nombreCompleto || "Estudiante"} · {formatDate(loan.fechaPrestamo)}</p>
+                  <p className="font-medium text-gray-700 dark:text-[#F5F7FF]">{loan.libro?.titulo || "Libro"}</p>
+                  <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{loan.estudiante?.user?.nombreCompleto || "Estudiante"} · {formatDate(loan.fechaPrestamo)}</p>
                 </div>
-                <Badge className="bg-blue-500">{loan.estado}</Badge>
+                <Badge className="bg-[#6C5CE7]/80">{loan.estado}</Badge>
               </div>
             ))}
         </CardContent>
@@ -202,8 +208,10 @@ export const DashboardPage = () => {
   );
 
   const renderTeacher = () => (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel Docente</h1>
+    <div className="page-shell space-y-6">
+      <div className="page-header">
+        <h1 className="page-title">Panel Docente</h1>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           { title: "Materias Asignadas", value: data.subjectCount, icon: BookOpen },
@@ -227,15 +235,15 @@ export const DashboardPage = () => {
         })}
       </div>
       <Card className={cardClass}>
-        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Mis materias</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="section-title">Mis materias</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {data.subjects.length === 0
             ? <p className="text-gray-500 dark:text-gray-400">No tienes materias asignadas.</p>
             : data.subjects.map((subject: any) => (
               <div key={subject.id} className={`flex items-center justify-between ${sectionBg}`}>
                 <div>
-                  <p className="font-medium text-gray-700 dark:text-gray-200">{subject.nombre}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{subject.codigo} · Semestre {subject.semestre}</p>
+                  <p className="font-medium text-gray-700 dark:text-[#F5F7FF]">{subject.nombre}</p>
+                  <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{subject.codigo} · Semestre {subject.semestre}</p>
                 </div>
                 <Button size="sm" onClick={() => navigate(`/subjects/${subject.id}`)}>Gestionar</Button>
               </div>
@@ -246,8 +254,10 @@ export const DashboardPage = () => {
   );
 
   const renderStudent = () => (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Panel de Estudiante</h1>
+    <div className="page-shell space-y-6">
+      <div className="page-header">
+        <h1 className="page-title">Panel de Estudiante</h1>
+      </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
           { title: "Materias", value: data.subjectsCount, icon: BookOpen },
@@ -272,13 +282,13 @@ export const DashboardPage = () => {
         })}
       </div>
       <Card className={cardClass}>
-        <CardHeader><CardTitle className="text-gray-800 dark:text-white">Materias disponibles</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="section-title">Materias disponibles</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {data.subjects.length === 0
             ? <p className="text-gray-500 dark:text-gray-400">No hay materias para mostrar.</p>
             : data.subjects.map((subject: any) => (
               <div key={subject.id} className={`flex items-center justify-between ${sectionBg}`}>
-                <span className="font-medium text-gray-700 dark:text-gray-200">{subject.nombre}</span>
+                <span className="font-medium text-gray-700 dark:text-[#F5F7FF]">{subject.nombre}</span>
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)}>Ver Detalles</Button>
               </div>
             ))}
@@ -300,10 +310,10 @@ export const DashboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen(prev => !prev)} />
-      <main className="ml-0 lg:ml-64 pt-16">
+      <main className="ml-0 bg-transparent lg:ml-64 pt-16">
         {renderContent()}
       </main>
     </div>

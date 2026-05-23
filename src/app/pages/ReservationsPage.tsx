@@ -34,7 +34,7 @@ export const ReservationsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar />
       <TopBar />
       <main className="ml-64 pt-16 p-6">
@@ -60,7 +60,7 @@ export const ReservationsPage = () => {
                     <TableCell>{reservation.date}</TableCell>
                     <TableCell>{reservation.time}</TableCell>
                     <TableCell>
-                      <Badge className={reservation.status === 'Próxima' ? 'bg-blue-500' : 'bg-gray-500'}>
+                      <Badge className={reservation.status === 'Próxima' ? 'bg-[#6C5CE7]/80' : 'bg-gray-500'}>
                         {reservation.status}
                       </Badge>
                     </TableCell>
@@ -80,9 +80,9 @@ export const ReservationsPage = () => {
               </TableBody>
             </Table>
 
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-800">📋 Política de Cancelación</p>
-              <p className="text-sm text-blue-600 mt-1">
+            <div className="mt-6 p-4 bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg">
+              <p className="text-sm font-medium text-[#5b4bd1]">📋 Política de Cancelación</p>
+              <p className="text-sm text-[#6C5CE7] mt-1">
                 Las reservas pueden cancelarse hasta 24 horas antes del horario programado.
               </p>
             </div>
