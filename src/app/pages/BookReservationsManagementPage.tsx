@@ -10,6 +10,7 @@ import { Badge } from "../components/ui/badge";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 interface BookRecord { id: number; titulo: string; cantidadDisponible: number; estado: string; }
 interface UserRecord { id: number; nombreCompleto: string; rol: string; }
@@ -111,40 +112,59 @@ export const BookReservationsManagementPage = () => {
 
   return (
     <PageLayout>
-      <div className="px-6 pb-6 pt-6">
-        <div className="mb-6"><h1 className="text-3xl font-bold text-gray-900">Reservas de Libro</h1></div>
+      <div className="page-shell">
+        <div className="page-header"><h1 className="page-title">Reservas de Libro</h1></div>
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <Input placeholder="Buscar por libro o estudiante..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
           </div>
-          <Button onClick={() => handleOpenDialog()} className="bg-blue-900 hover:bg-blue-800"><Plus size={16} className="mr-2" />Crear Reserva</Button>
+          <Button onClick={() => handleOpenDialog()} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"><Plus size={16} className="mr-2" />Crear Reserva</Button>
         </div>
-        <Card>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead><tr className="border-b"><th className="p-3 text-left">Libro</th><th className="p-3 text-left">Estudiante</th><th className="p-3 text-left">Fecha préstamo</th><th className="p-3 text-left">Fecha límite</th><th className="p-3 text-left">Estado</th><th className="p-3 text-right">Acciones</th></tr></thead>
-                <tbody>
-                  {loading ? <tr><td colSpan={6} className="p-8 text-center text-gray-500">Cargando reservas...</td></tr> :
-                    filteredLoans.length === 0 ? <tr><td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron reservas</td></tr> :
-                      filteredLoans.map((loan) => (
-                        <tr key={loan.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-medium">{loan.bookTitle}</td>
-                          <td className="p-3 text-gray-600">{loan.studentName}</td>
-                          <td className="p-3 text-gray-600">{new Date(loan.loanDate).toLocaleDateString("es-ES")}</td>
-                          <td className="p-3 text-gray-600">{new Date(loan.dueDate).toLocaleDateString("es-ES")}</td>
-                          <td className="p-3"><Badge className="bg-blue-500">{loan.status}</Badge></td>
-                          <td className="p-3"><div className="flex justify-end gap-2">
+        <Card className="mt-1 border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            {loading ? (
+              <p className="py-8 text-center text-gray-500 dark:text-gray-400">Cargando reservas...</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="dark:border-gray-700">
+                    <TableHead className="dark:text-gray-300">Libro</TableHead>
+                    <TableHead className="dark:text-gray-300">Estudiante</TableHead>
+                    <TableHead className="dark:text-gray-300">Fecha préstamo</TableHead>
+                    <TableHead className="dark:text-gray-300">Fecha límite</TableHead>
+                    <TableHead className="dark:text-gray-300">Estado</TableHead>
+                    <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLoans.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No se encontraron reservas
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLoans.map((loan) => (
+                      <TableRow key={loan.id} className="hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                        <TableCell className="font-medium dark:text-white">{loan.bookTitle}</TableCell>
+                        <TableCell className="dark:text-gray-400">{loan.studentName}</TableCell>
+                        <TableCell className="dark:text-gray-400">{new Date(loan.loanDate).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="dark:text-gray-400">{new Date(loan.dueDate).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell><Badge className="bg-[#6C5CE7]/80">{loan.status}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
                             <Button size="sm" variant="ghost" onClick={() => handleOpenDialog(loan)}><Edit size={16} /></Button>
                             <Button size="sm" variant="ghost" onClick={() => { setLoanToDelete(loan); setShowDeleteDialog(true); }}><Trash2 size={16} className="text-red-600" /></Button>
-                          </div></td>
-                        </tr>
-                      ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </Card>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
@@ -156,7 +176,7 @@ export const BookReservationsManagementPage = () => {
               <div><Label>Fecha límite de devolución</Label><Input type="date" value={formData.fechaLimiteDevolucion} onChange={(e) => setFormData({ ...formData, fechaLimiteDevolucion: e.target.value })} /></div>
               <div><Label>Estado</Label><Select value={formData.estado} onValueChange={(value) => setFormData({ ...formData, estado: value as LoanRecord["status"] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ACTIVO">Activo</SelectItem><SelectItem value="DEVUELTO">Devuelto</SelectItem><SelectItem value="VENCIDO">Vencido</SelectItem><SelectItem value="PERDIDO">Perdido</SelectItem></SelectContent></Select></div>
             </div>
-            <DialogFooter><Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving} className="bg-blue-900 hover:bg-blue-800">{saving ? "Guardando..." : "Guardar"}</Button></DialogFooter>
+            <DialogFooter><Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancelar</Button><Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{saving ? "Guardando..." : "Guardar"}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
