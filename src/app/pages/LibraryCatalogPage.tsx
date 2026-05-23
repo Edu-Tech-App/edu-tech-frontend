@@ -76,17 +76,17 @@ export const LibraryCatalogPage = () => {
   return (
     <PageLayout>
       <div className="p-6">
-        <Card>
-          <CardHeader><CardTitle>Catálogo de Biblioteca</CardTitle></CardHeader>
-          <CardContent>
+        <Card className="border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800/40">
+          <CardHeader><CardTitle className="section-title">Catálogo de Biblioteca</CardTitle></CardHeader>
+          <div>
             <div className="flex gap-4 mb-6">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <Input placeholder="Buscar por título o autor..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+                <Input placeholder="Buscar por título o autor..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-700 dark:border-gray-700 dark:text-white dark:placeholder-gray-400" />
               </div>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-64"><SelectValue placeholder="Categoría" /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="w-64 dark:bg-gray-700 dark:border-gray-700 dark:text-white"><SelectValue placeholder="Categoría" /></SelectTrigger>
+                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                   <SelectItem value="all">Todas las Categorías</SelectItem>
                   {categories.map((item) => <SelectItem key={item} value={item}>{formatCategory(item)}</SelectItem>)}
                 </SelectContent>
@@ -94,32 +94,32 @@ export const LibraryCatalogPage = () => {
             </div>
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Título</TableHead><TableHead>Autor</TableHead><TableHead>Categoría</TableHead>
-                  <TableHead>Editorial</TableHead><TableHead>Estado</TableHead><TableHead>Copias</TableHead><TableHead>Acciones</TableHead>
+                <TableRow className="dark:border-gray-700">
+                  <TableHead className="dark:text-[#F5F7FF]">Título</TableHead><TableHead className="dark:text-[#F5F7FF]">Autor</TableHead><TableHead className="dark:text-[#F5F7FF]">Categoría</TableHead>
+                  <TableHead className="dark:text-[#F5F7FF]">Editorial</TableHead><TableHead className="dark:text-[#F5F7FF]">Estado</TableHead><TableHead className="dark:text-[#F5F7FF]">Copias</TableHead><TableHead className="dark:text-[#F5F7FF]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">Cargando libros...</TableCell></TableRow>
+                  <TableRow className="dark:border-gray-700"><TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando libros...</TableCell></TableRow>
                 ) : filteredBooks.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">No se encontraron libros con los filtros actuales.</TableCell></TableRow>
+                  <TableRow className="dark:border-gray-700"><TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">No se encontraron libros con los filtros actuales.</TableCell></TableRow>
                 ) : (
                   filteredBooks.map((book) => (
-                    <TableRow key={book.id}>
-                      <TableCell className="font-medium">{book.titulo}</TableCell>
-                      <TableCell>{book.autor}</TableCell>
-                      <TableCell>{formatCategory(book.categoria)}</TableCell>
-                      <TableCell>{book.editorial || "Sin editorial"}</TableCell>
+                    <TableRow key={book.id} className="dark:border-gray-700 dark:hover:bg-gray-700/50">
+                      <TableCell className="font-medium dark:text-[#F5F7FF]">{book.titulo}</TableCell>
+                      <TableCell className="dark:text-[#B7BDD6]">{book.autor}</TableCell>
+                      <TableCell className="dark:text-[#B7BDD6]">{formatCategory(book.categoria)}</TableCell>
+                      <TableCell className="dark:text-[#B7BDD6]">{book.editorial || "Sin editorial"}</TableCell>
                       <TableCell><span className={`px-2 py-1 rounded-full text-xs ${getStatusClasses(book.estado)}`}>{formatStatus(book.estado)}</span></TableCell>
-                      <TableCell>{book.cantidadDisponible}</TableCell>
+                      <TableCell className="dark:text-[#B7BDD6]">{book.cantidadDisponible}</TableCell>
                       <TableCell><Button size="sm" variant="ghost" onClick={() => navigate(`/library/book/${book.id}`)}><Eye size={16} className="mr-2" />Ver</Button></TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
-          </CardContent>
+          </div>
         </Card>
       </div>
     </PageLayout>

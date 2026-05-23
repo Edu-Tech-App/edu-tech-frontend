@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router";
+import { FaGraduationCap } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import { BookOpen, LayoutDashboard, GraduationCap, Calendar, DollarSign, Users, LogOut, BarChart3, BookMarked, Library, DoorOpen, CalendarCheck, X } from "lucide-react";
 
@@ -73,24 +74,31 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
       {/* Sidebar */}
       <div className={`
-        w-64 bg-blue-900 text-white h-screen fixed left-0 top-0 flex flex-col z-40
+        w-64 text-[var(--color-sidebar-foreground)] h-screen fixed left-0 top-0 flex flex-col z-40
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-      `}>
-        <div className="p-6 border-b border-blue-800">
+      `}
+      style={{ background: "var(--sidebar-gradient)" }}>
+        <div className="p-6 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-blue-800 flex items-center justify-center shrink-0">
-              <GraduationCap size={24} className="text-white" />
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: "var(--sidebar-icon-surface)" }}
+            >
+              <FaGraduationCap size={22} className="text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold">Edu-Tech</h1>
-              <p className="text-blue-200 text-sm mt-1">Sistema Institucional</p>
+              <h1 className="text-2xl font-bold">Edu Tech</h1>
+              <p className="text-sm mt-1" style={{ color: "var(--sidebar-muted)" }}>Sistema Institucional</p>
             </div>
             {/* Botón cerrar solo en móvil */}
             <button
               onClick={onClose}
-              className="lg:hidden p-1 rounded-lg hover:bg-blue-800 transition-colors"
+              className="lg:hidden p-1 rounded-lg transition-colors"
+              style={{ backgroundColor: "transparent" }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--sidebar-item-hover)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
             >
               <X size={20} />
             </button>
@@ -105,21 +113,32 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <button
                 key={item.path}
                 onClick={() => handleNavigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
-                  isActive ? 'bg-blue-700' : 'hover:bg-blue-800'
-                }`}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-[12px] mb-2 transition-colors text-left"
+                style={{
+                  backgroundColor: isActive ? "var(--sidebar-item-active)" : "transparent",
+                  color: isActive ? "#FFFFFF" : "var(--sidebar-item)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "var(--sidebar-item-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                }}
               >
-                <Icon size={20} />
-                <span>{item.label}</span>
+                <Icon size={20} className="shrink-0" />
+                <span className="whitespace-nowrap text-sm leading-none">{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-blue-800">
+        <div className="p-4 border-t" style={{ borderColor: "var(--sidebar-border)" }}>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-blue-800 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-[12px] transition-colors"
+            style={{ color: "var(--sidebar-item)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--sidebar-item-hover)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
           >
             <LogOut size={20} />
             <span>Cerrar Sesión</span>

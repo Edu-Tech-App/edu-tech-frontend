@@ -99,7 +99,7 @@ export const SubjectDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
         <main className="lg:ml-64 pt-16 p-6">
@@ -114,7 +114,7 @@ export const SubjectDetailPage = () => {
   if (!subject) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <main className="lg:ml-64 pt-16 p-6">
@@ -137,8 +137,8 @@ export const SubjectDetailPage = () => {
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader><CardTitle className="dark:text-white">Mis Calificaciones</CardTitle></CardHeader>
             <CardContent>
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-300">💡 Las notas se califican en escala de 0.0 a 5.0</p>
+              <div className="mb-4 p-3 bg-[#6C5CE7]/8 dark:bg-[#6C5CE7]/20 border border-[#6C5CE7]/20 dark:border-[#6C5CE7]/35 rounded-lg">
+                <p className="text-sm text-[#5b4bd1] dark:text-[#d9d4ff]">💡 Las notas se califican en escala de 0.0 a 5.0</p>
               </div>
               <Table>
                 <TableHeader>
@@ -154,15 +154,15 @@ export const SubjectDetailPage = () => {
                   ) : grades.map((grade) => (
                     <TableRow key={grade.id} className="dark:border-gray-700">
                       <TableCell className="font-medium dark:text-white">{grade.periodoAcademico}</TableCell>
-                      <TableCell><span className="font-bold text-blue-600">{Number(grade.valor).toFixed(2)}</span></TableCell>
+                      <TableCell><span className="font-bold text-[#6C5CE7]">{Number(grade.valor).toFixed(2)}</span></TableCell>
                       <TableCell className="dark:text-gray-400">{new Date(grade.fechaRegistro).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="mt-6 p-4 bg-[#6C5CE7]/8 dark:bg-[#6C5CE7]/20 border border-[#6C5CE7]/20 dark:border-[#6C5CE7]/35 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Promedio Actual</p>
-                <p className="text-3xl font-bold text-blue-600">{currentAverage}</p>
+                <p className="text-3xl font-bold text-[#6C5CE7]">{currentAverage}</p>
               </div>
             </CardContent>
           </Card>
@@ -188,7 +188,7 @@ export const SubjectDetailPage = () => {
                       <TableCell className="font-medium dark:text-white">{student.name}</TableCell>
                       <TableCell className="dark:text-gray-400">{student.studentId}</TableCell>
                       <TableCell className="dark:text-gray-400">{student.average}</TableCell>
-                      <TableCell className="font-bold text-blue-600">{student.average}</TableCell>
+                      <TableCell className="font-bold text-[#6C5CE7]">{student.average}</TableCell>
                       <TableCell>
                         <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700" onClick={() => {
                           const grade = grades.find((g) => g.id === student.latestGradeId);
@@ -217,7 +217,7 @@ export const SubjectDetailPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowEditDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={confirmEditGrade} className="bg-blue-900 hover:bg-blue-800">Guardar Nota</Button>
+              <Button onClick={confirmEditGrade} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Guardar Nota</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

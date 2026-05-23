@@ -40,8 +40,8 @@ export const RoomReservationPage = () => {
           <Card>
             <CardHeader><CardTitle>Reservar Sala de Estudio</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
-                <p className="text-sm text-blue-800">💡 Selecciona la fecha, sala y horario para hacer tu reserva.</p>
+              <div className="p-3 bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg mb-4">
+                <p className="text-sm text-[#5b4bd1]">💡 Selecciona la fecha, sala y horario para hacer tu reserva.</p>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Selecciona la Fecha</label>
@@ -61,7 +61,7 @@ export const RoomReservationPage = () => {
                   <SelectContent>{timeSlots.map((slot) => <SelectItem key={slot} value={slot}>{slot}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleReserve} className="w-full bg-blue-900 hover:bg-blue-800">Reservar Sala</Button>
+              <Button onClick={handleReserve} className="w-full bg-[#6C5CE7] hover:bg-[#5b4bd1]">Reservar Sala</Button>
             </CardContent>
           </Card>
 
@@ -73,7 +73,7 @@ export const RoomReservationPage = () => {
                   { room: 'Sala de Estudio 101', date: '25/04/2026', time: '14:00 - 16:00' },
                   { room: 'Sala de Conferencias 201', date: '27/04/2026', time: '10:00 - 12:00' },
                 ].map((reservation, idx) => (
-                  <div key={idx} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div key={idx} className="p-4 bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg">
                     <p className="font-medium text-gray-800">{reservation.room}</p>
                     <p className="text-sm text-gray-600">{reservation.date} · {reservation.time}</p>
                     <Button size="sm" variant="destructive" className="mt-2">Cancelar Reserva</Button>
@@ -97,7 +97,7 @@ export const RoomReservationPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>Cancelar</Button>
-              <Button onClick={confirmReservation} className="bg-blue-900 hover:bg-blue-800">Confirmar Reserva</Button>
+              <Button onClick={confirmReservation} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Confirmar Reserva</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

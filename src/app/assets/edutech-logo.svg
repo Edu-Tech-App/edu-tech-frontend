@@ -1,0 +1,37 @@
+<svg width="440" height="104" viewBox="0 0 440 104" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="capTop" x1="10" y1="12" x2="78" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7565F5"/>
+      <stop offset="1" stop-color="#6C5CE7"/>
+    </linearGradient>
+    <linearGradient id="capBase" x1="18" y1="30" x2="63" y2="67" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6758E8"/>
+      <stop offset="1" stop-color="#5847D8"/>
+    </linearGradient>
+    <linearGradient id="innerShade" x1="24" y1="33" x2="50" y2="47" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#31227F" stop-opacity="0"/>
+      <stop offset="1" stop-color="#31227F" stop-opacity="0.22"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(8 10)">
+    <path d="M4 25L40 8L76 25L40 42L4 25Z" fill="url(#capTop)"/>
+    <path d="M18 33V50C18 57 27.7 63 40 63C52.3 63 62 57 62 50V33L40 42L18 33Z" fill="url(#capBase)"/>
+    <path d="M18 33L40 42L62 33L40 47L18 33Z" fill="url(#innerShade)"/>
+
+    <path d="M76 25V42.5" stroke="#6C5CE7" stroke-width="6.5" stroke-linecap="round"/>
+    <circle cx="76" cy="49" r="5.2" fill="#6C5CE7"/>
+  </g>
+
+  <text
+    x="114"
+    y="62"
+    fill="#23244F"
+    font-family="Poppins, Circular Std, Avenir Next, Arial, sans-serif"
+    font-size="45"
+    font-weight="800"
+    letter-spacing="-0.03em"
+  >
+    Edu Tech
+  </text>
+</svg>

@@ -47,7 +47,7 @@ export function PopularBooks() {
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <h3>Popular Books</h3>
-        <Button variant="link" className="text-blue-600">
+        <Button variant="link" className="text-[#6C5CE7]">
           View All
         </Button>
       </div>

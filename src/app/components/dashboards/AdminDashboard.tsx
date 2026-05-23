@@ -48,7 +48,7 @@ export const AdminDashboard = () => {
                 <p className="text-sm text-gray-600">Total Usuarios</p>
                 <p className="text-3xl font-bold text-gray-800 mt-2">{stats?.totalUsuarios ?? 0}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-[#6C5CE7]/14 text-[#6C5CE7] flex items-center justify-center">
                 <Users size={24} />
               </div>
             </div>
@@ -112,9 +112,9 @@ export const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <GraduationCap size={24} className="mx-auto text-blue-600 mb-2" />
-              <p className="text-2xl font-bold text-blue-600">{stats?.totalEstudiantes ?? 0}</p>
+            <div className="text-center p-4 bg-[#6C5CE7]/8 rounded-lg">
+              <GraduationCap size={24} className="mx-auto text-[#6C5CE7] mb-2" />
+              <p className="text-2xl font-bold text-[#6C5CE7]">{stats?.totalEstudiantes ?? 0}</p>
               <p className="text-sm text-gray-600">Estudiantes</p>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">

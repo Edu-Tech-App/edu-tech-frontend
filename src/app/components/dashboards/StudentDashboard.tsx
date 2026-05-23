@@ -63,7 +63,7 @@ export const StudentDashboard = () => {
   }, [user?.id]);
 
   const statCards = [
-    { title: "Materias Activas", value: stats.materias.toString(), icon: BookOpen, color: "bg-blue-100 text-blue-600" },
+    { title: "Materias Activas", value: stats.materias.toString(), icon: BookOpen, color: "bg-[#6C5CE7]/14 text-[#6C5CE7]" },
     { title: "Libros Prestados", value: stats.librosPrestados.toString(), icon: BookMarked, color: "bg-green-100 text-green-600" },
     { title: "Multas Pendientes", value: formatCurrency(stats.multasPendientes), icon: DollarSign, color: "bg-yellow-100 text-yellow-600" },
     { title: "Reservas", value: stats.reservas.toString(), icon: Calendar, color: "bg-purple-100 text-purple-600" },

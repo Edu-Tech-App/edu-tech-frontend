@@ -89,11 +89,11 @@ export const BookDetailPage = () => {
 
   const getCoverStyles = (categoria: string | null) => {
     const styles: Record<string, string> = {
-      INGENIERIA_SISTEMAS: "from-slate-900 via-blue-900 to-cyan-700",
+      INGENIERIA_SISTEMAS: "from-slate-900 via-[#6C5CE7] to-cyan-700",
       INGENIERIA_CIVIL: "from-stone-800 via-amber-700 to-orange-500",
       INGENIERIA_INDUSTRIAL: "from-zinc-900 via-neutral-700 to-lime-600",
       ADMINISTRACION: "from-emerald-900 via-green-700 to-teal-500",
-      CONTADURIA: "from-sky-950 via-blue-800 to-sky-500",
+      CONTADURIA: "from-sky-950 via-[#6C5CE7] to-sky-500",
       ECONOMIA: "from-emerald-950 via-emerald-700 to-yellow-500",
       DERECHO: "from-neutral-950 via-neutral-800 to-red-700",
       MEDICINA: "from-red-950 via-rose-700 to-pink-500",
@@ -173,7 +173,7 @@ export const BookDetailPage = () => {
                 </div>
                 {user?.rol === "estudiante" && (
                   <div className="pt-4">
-                    <Button onClick={handleBorrow} className="w-full bg-blue-900 hover:bg-blue-800">Solicitar Préstamo</Button>
+                    <Button onClick={handleBorrow} className="w-full bg-[#6C5CE7] hover:bg-[#5b4bd1]">Solicitar Préstamo</Button>
                   </div>
                 )}
               </CardContent>
@@ -193,7 +193,7 @@ export const BookDetailPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>Cancelar</Button>
-              <Button onClick={confirmBorrow} className="bg-blue-900 hover:bg-blue-800">Confirmar</Button>
+              <Button onClick={confirmBorrow} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

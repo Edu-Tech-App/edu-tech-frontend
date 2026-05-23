@@ -36,8 +36,8 @@ export const LoanManagementPage = () => {
         <Card>
           <CardHeader><CardTitle>Gestión de Préstamos</CardTitle></CardHeader>
           <CardContent>
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">💡 <strong>Ayuda:</strong> Aquí puedes ver todos los préstamos activos y procesar devoluciones de libros.</p>
+            <div className="mb-4 p-4 bg-[#6C5CE7]/8 border border-[#6C5CE7]/20 rounded-lg">
+              <p className="text-sm text-[#5b4bd1]">💡 <strong>Ayuda:</strong> Aquí puedes ver todos los préstamos activos y procesar devoluciones de libros.</p>
             </div>
             <Table>
               <TableHeader>
@@ -85,7 +85,7 @@ export const LoanManagementPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowReturnDialog(false)}>Cancelar</Button>
-              <Button onClick={confirmReturn} className="bg-blue-900 hover:bg-blue-800">Confirmar Devolución</Button>
+              <Button onClick={confirmReturn} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Confirmar Devolución</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

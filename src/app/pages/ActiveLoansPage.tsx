@@ -54,7 +54,7 @@ export const ActiveLoansPage = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <Badge className="bg-blue-500">Activo</Badge>;
+      case 'active': return <Badge className="bg-[#6C5CE7]/80">Activo</Badge>;
       case 'overdue': return <Badge className="bg-red-500">Vencido</Badge>;
       case 'returned': return <Badge className="bg-green-500">Devuelto</Badge>;
       default: return <Badge>{status}</Badge>;
@@ -70,7 +70,7 @@ export const ActiveLoansPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Total Activos</p><p className="text-3xl font-bold text-blue-600">{activeLoans.length}</p></div><Clock size={40} className="text-blue-600" /></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Total Activos</p><p className="text-3xl font-bold text-[#6C5CE7]">{activeLoans.length}</p></div><Clock size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Préstamos Vencidos</p><p className="text-3xl font-bold text-red-600">{overdueLoans.length}</p></div><XCircle size={40} className="text-red-600" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Multas Pendientes</p><p className="text-3xl font-bold text-yellow-600">${overdueLoans.reduce((sum, loan) => sum + (loan.fine || 0), 0)}</p></div><CheckCircle size={40} className="text-yellow-600" /></div></CardContent></Card>
         </div>

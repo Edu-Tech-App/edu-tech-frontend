@@ -7,7 +7,7 @@ export const LibrarianDashboard = () => {
   const navigate = useNavigate();
 
   const stats = [
-    { title: 'Active Loans', value: '156', icon: BookMarked, color: 'bg-blue-100 text-blue-600' },
+    { title: 'Active Loans', value: '156', icon: BookMarked, color: 'bg-[#6C5CE7]/14 text-[#6C5CE7]' },
     { title: 'Overdue Books', value: '23', icon: BookX, color: 'bg-red-100 text-red-600' },
     { title: 'Total Fines', value: '$450', icon: DollarSign, color: 'bg-yellow-100 text-yellow-600' }
   ];
