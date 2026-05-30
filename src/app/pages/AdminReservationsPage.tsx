@@ -1,79 +1,366 @@
-import { PageLayout } from "../components/PageLayout";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { DoorOpen, Library, Clock, CheckCircle, XCircle } from "lucide-react";
-import { useNavigate } from "react-router";
-import { useEffect, useState } from "react";
+import { Input } from "../components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Badge } from "../components/ui/badge";
+import { BookMarked, CalendarCheck, CheckCircle2, Clock3, DoorOpen, History, RefreshCcw, Search, XCircle } from "lucide-react";
 import { api } from "../../services/api";
+import { toast } from "sonner";
 
-interface SummaryReservation {
-  estado?: string;
+interface RoomReservationRecord {
+  id: number;
+  salaId: number;
+  fechaReserva: string;
+  horaInicio: string;
+  horaFin: string;
+  estado: "ACTIVA" | "COMPLETADA" | "CANCELADA";
+  sala?: { nombre?: string };
+  estudiante?: { user?: { nombreCompleto?: string } };
+  docente?: { user?: { nombreCompleto?: string } };
 }
+
+interface BookReservationRecord {
+  id: number;
+  fechaPrestamo: string;
+  fechaLimiteDevolucion?: string;
+  fechaDevolucion?: string;
+  estado: "ACTIVO" | "DEVUELTO" | "VENCIDO" | "PERDIDO";
+  libro?: { titulo?: string };
+  estudiante?: { user?: { nombreCompleto?: string } };
+}
+
+type UnifiedReservation = {
+  id: string;
+  type: "room" | "book";
+  status: "pending" | "approved" | "rejected" | "completed" | "rescheduled" | "cancelled";
+  title: string;
+  subtitle: string;
+  dateLabel: string;
+};
+
+const mapRoomStatus = (status: RoomReservationRecord["estado"]): UnifiedReservation["status"] => {
+  if (status === "ACTIVA") return "approved";
+  if (status === "COMPLETADA") return "completed";
+  return "cancelled";
+};
+
+const mapBookStatus = (status: BookReservationRecord["estado"]): UnifiedReservation["status"] => {
+  if (status === "ACTIVO") return "approved";
+  if (status === "DEVUELTO") return "completed";
+  if (status === "VENCIDO") return "rejected";
+  return "cancelled";
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return "Sin fecha";
+  return new Date(value).toLocaleDateString("es-ES");
+};
+
+const getStatusLabel = (status: UnifiedReservation["status"]) => {
+  const labels: Record<UnifiedReservation["status"], string> = {
+    pending: "Solicitudes pendientes",
+    approved: "Reservas aprobadas",
+    rejected: "Reservas rechazadas",
+    completed: "Historial de reservas",
+    rescheduled: "Reprogramaciones",
+    cancelled: "Cancelaciones",
+  };
+  return labels[status];
+};
+
+const getStatusClass = (status: UnifiedReservation["status"]) => {
+  const classes: Record<UnifiedReservation["status"], string> = {
+    pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    approved: "bg-[#6C5CE7]/12 text-[#5b4bd1] dark:bg-[#6C5CE7]/20 dark:text-[#d9d4ff]",
+    rejected: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+    completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    rescheduled: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+    cancelled: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+  };
+  return classes[status];
+};
 
 export const AdminReservationsPage = () => {
   const navigate = useNavigate();
-  const [activeCount, setActiveCount] = useState(0);
-  const [completedCount, setCompletedCount] = useState(0);
-  const [cancelledCount, setCancelledCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tab, setTab] = useState("resumen");
+  const [loading, setLoading] = useState(true);
+  const [roomReservations, setRoomReservations] = useState<RoomReservationRecord[]>([]);
+  const [bookReservations, setBookReservations] = useState<BookReservationRecord[]>([]);
 
   useEffect(() => {
-    const loadSummary = async () => {
+    const loadData = async () => {
       try {
-        const [roomReservations, bookReservations] = await Promise.all([
+        setLoading(true);
+        const [roomsData, booksData] = await Promise.all([
           api.getRoomReservations(),
           api.getLoans(),
         ]);
-        const allStatuses = [...(roomReservations as SummaryReservation[]), ...(bookReservations as SummaryReservation[])].map((item) => item.estado);
-        setActiveCount(allStatuses.filter((s) => s === "ACTIVA" || s === "ACTIVO").length);
-        setCompletedCount(allStatuses.filter((s) => s === "COMPLETADA" || s === "DEVUELTO").length);
-        setCancelledCount(allStatuses.filter((s) => s === "CANCELADA" || s === "PERDIDO" || s === "VENCIDO").length);
-      } catch {
-        setActiveCount(0); setCompletedCount(0); setCancelledCount(0);
+        setRoomReservations(roomsData);
+        setBookReservations(booksData);
+      } catch (error: any) {
+        toast.error(error.message || "No se pudieron cargar las reservas");
+      } finally {
+        setLoading(false);
       }
     };
-    void loadSummary();
+
+    void loadData();
   }, []);
 
-  return (
-    <PageLayout>
-      <div className="page-shell">
-        <div className="page-header">
-          <h1 className="page-title">Gestión de Reservas</h1>
-        </div>
+  const unifiedReservations = useMemo<UnifiedReservation[]>(() => {
+    const roomItems = roomReservations.map((reservation) => ({
+      id: `room-${reservation.id}`,
+      type: "room" as const,
+      status: mapRoomStatus(reservation.estado),
+      title: reservation.sala?.nombre || `Sala ${reservation.salaId}`,
+      subtitle: reservation.estudiante?.user?.nombreCompleto || reservation.docente?.user?.nombreCompleto || "Usuario no disponible",
+      dateLabel: `${formatDate(reservation.fechaReserva)} · ${reservation.horaInicio.slice(0, 5)} - ${reservation.horaFin.slice(0, 5)}`,
+    }));
 
-        <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-3">
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Activas</p><p className="text-3xl font-bold text-[#6C5CE7]">{activeCount}</p></div><Clock size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Completadas</p><p className="text-3xl font-bold text-green-600">{completedCount}</p></div><CheckCircle size={40} className="text-green-600" /></div></CardContent></Card>
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Canceladas</p><p className="text-3xl font-bold text-red-600">{cancelledCount}</p></div><XCircle size={40} className="text-red-600" /></div></CardContent></Card>
-        </div>
+    const bookItems = bookReservations.map((loan) => ({
+      id: `book-${loan.id}`,
+      type: "book" as const,
+      status: mapBookStatus(loan.estado),
+      title: loan.libro?.titulo || "Reserva de libro",
+      subtitle: loan.estudiante?.user?.nombreCompleto || "Usuario no disponible",
+      dateLabel: `${formatDate(loan.fechaPrestamo)} · límite ${formatDate(loan.fechaLimiteDevolucion || loan.fechaDevolucion)}`,
+    }));
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Card className="dark:border-gray-700 dark:bg-gray-800">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <DoorOpen className="text-[#6C5CE7]" />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Reservas de Sala</h2>
-              </div>
-              <p className="mb-6 text-gray-600 dark:text-[#B7BDD6]">CRUD completo para reservas de salas de estudio.</p>
-              <Button onClick={() => navigate("/reservations/rooms")} className="bg-[#6C5CE7] hover:bg-[#5b4bd1] whitespace-nowrap">
-                Ir a Reservas de Sala
-              </Button>
-            </CardContent>
-          </Card>
-          <Card className="dark:border-gray-700 dark:bg-gray-800">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <Library className="text-[#6C5CE7]" />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Reservas de Libro</h2>
-              </div>
-              <p className="mb-6 text-gray-600 dark:text-[#B7BDD6]">CRUD completo para préstamos o reservas de libros.</p>
-              <Button onClick={() => navigate("/reservations/books")} className="bg-[#6C5CE7] hover:bg-[#5b4bd1] whitespace-nowrap">
-                Ir a Reservas de Libro
-              </Button>
-            </CardContent>
-          </Card>
+    return [...roomItems, ...bookItems]
+      .filter((item) => {
+        const term = searchTerm.toLowerCase();
+        return item.title.toLowerCase().includes(term) || item.subtitle.toLowerCase().includes(term);
+      })
+      .sort((left, right) => right.id.localeCompare(left.id));
+  }, [bookReservations, roomReservations, searchTerm]);
+
+  const metrics = useMemo(() => {
+    const roomCount = roomReservations.length;
+    const bookCount = bookReservations.length;
+    const pendingCount = unifiedReservations.filter((item) => item.status === "pending").length;
+    const approvedCount = unifiedReservations.filter((item) => item.status === "approved").length;
+    const rejectedCount = unifiedReservations.filter((item) => item.status === "rejected").length;
+    const cancelledCount = unifiedReservations.filter((item) => item.status === "cancelled").length;
+
+    return [
+      { label: "Reservas de salas", value: roomCount },
+      { label: "Reservas de libros", value: bookCount },
+      { label: "Solicitudes pendientes", value: pendingCount },
+      { label: "Reservas aprobadas", value: approvedCount },
+      { label: "Reservas rechazadas", value: rejectedCount },
+      { label: "Cancelaciones", value: cancelledCount },
+    ];
+  }, [bookReservations.length, roomReservations.length, unifiedReservations]);
+
+  const grouped = useMemo(() => ({
+    pending: unifiedReservations.filter((item) => item.status === "pending"),
+    approved: unifiedReservations.filter((item) => item.status === "approved"),
+    rejected: unifiedReservations.filter((item) => item.status === "rejected"),
+    rescheduled: unifiedReservations.filter((item) => item.status === "rescheduled"),
+    cancelled: unifiedReservations.filter((item) => item.status === "cancelled"),
+    history: unifiedReservations.filter((item) => item.status === "completed"),
+  }), [unifiedReservations]);
+
+  const renderReservationList = (items: UnifiedReservation[], emptyMessage: string) => {
+    if (items.length === 0) {
+      return <p className="text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>;
+    }
+
+    return items.map((item) => (
+      <div key={item.id} className="rounded-lg bg-gray-50 p-3.5 dark:bg-gray-700/50">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="font-medium text-gray-700 dark:text-white">{item.title}</p>
+            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{item.subtitle}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-[#B7BDD6]">{item.dateLabel}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={getStatusClass(item.status)}>{getStatusLabel(item.status)}</Badge>
+            <Badge className={item.type === "room" ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300" : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"}>
+              {item.type === "room" ? "Sala" : "Libro"}
+            </Badge>
+          </div>
         </div>
       </div>
-    </PageLayout>
+    ));
+  };
+
+  return (
+    <div className="h-screen overflow-hidden bg-background transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-4">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-6">
+          {metrics.map((item) => (
+            <Card key={item.label} className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <CardContent className="px-3 py-2">
+                <p className="text-[12px] leading-tight text-gray-500 dark:text-[#B7BDD6]">{item.label}</p>
+                <p className="mt-0.5 text-[1.45rem] font-bold leading-none text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800">
+            <Search className="shrink-0 text-gray-400" size={18} />
+            <Input
+              placeholder="Buscar"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent dark:text-white dark:placeholder-gray-400"
+            />
+          </div>
+          <Button onClick={() => navigate("/reservations/rooms")} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+            <DoorOpen size={16} className="mr-2" />Reservas de salas
+          </Button>
+          <Button onClick={() => navigate("/reservations/books")} variant="outline" className="h-10 shrink-0 dark:border-gray-600 dark:text-gray-300">
+            <BookMarked size={16} className="mr-2" />Reservas de libros
+          </Button>
+        </div>
+
+        <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0 last:pb-0 [&:last-child]:pb-0">
+            {loading ? (
+              <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                Cargando reservas...
+              </div>
+            ) : (
+              <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+                <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                  <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 lg:grid-cols-4 dark:bg-gray-900/60">
+                    <TabsTrigger value="resumen">Resumen</TabsTrigger>
+                    <TabsTrigger value="estados">Estados</TabsTrigger>
+                    <TabsTrigger value="operacion">Operación</TabsTrigger>
+                    <TabsTrigger value="historial">Historial</TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <TabsContent value="resumen" className="mt-0">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-3">
+                            <DoorOpen className="text-[#6C5CE7]" size={18} />
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Reservas de salas</h2>
+                          </div>
+                          <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Gestión operativa de solicitudes, aprobaciones, cancelaciones y agenda de ocupación de salas.</p>
+                          <Button onClick={() => navigate("/reservations/rooms")} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                            Ir a salas
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-3">
+                            <BookMarked className="text-[#6C5CE7]" size={18} />
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Reservas de libros</h2>
+                          </div>
+                          <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Control de préstamos, devoluciones, rechazos, pérdidas y trazabilidad del flujo de libros.</p>
+                          <Button onClick={() => navigate("/reservations/books")} variant="outline" className="dark:border-gray-600 dark:text-gray-300">
+                            Ir a libros
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="estados" className="mt-0 space-y-4">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Clock3 size={18} className="text-amber-500" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Solicitudes pendientes</h3>
+                          </div>
+                          {renderReservationList(grouped.pending, "No hay solicitudes pendientes con el backend actual.")}
+                        </CardContent>
+                      </Card>
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <CheckCircle2 size={18} className="text-[#6C5CE7]" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Reservas aprobadas</h3>
+                          </div>
+                          {renderReservationList(grouped.approved, "No hay reservas aprobadas.")}
+                        </CardContent>
+                      </Card>
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <XCircle size={18} className="text-rose-500" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Reservas rechazadas</h3>
+                          </div>
+                          {renderReservationList(grouped.rejected, "No hay reservas rechazadas.")}
+                        </CardContent>
+                      </Card>
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <CalendarCheck size={18} className="text-slate-500" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Cancelaciones</h3>
+                          </div>
+                          {renderReservationList(grouped.cancelled, "No hay cancelaciones registradas.")}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="operacion" className="mt-0 space-y-4">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <RefreshCcw size={18} className="text-sky-500" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Reprogramaciones</h3>
+                          </div>
+                          {renderReservationList(grouped.rescheduled, "Las reprogramaciones se gestionan actualmente como edición directa en reservas de sala o libro.")}
+                        </CardContent>
+                      </Card>
+                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                        <CardContent className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <DoorOpen size={18} className="text-[#6C5CE7]" />
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Accesos rápidos</h3>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                            <Button onClick={() => navigate("/reservations/rooms")} className="justify-start bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                              Administrar reservas de salas
+                            </Button>
+                            <Button onClick={() => navigate("/reservations/books")} variant="outline" className="justify-start dark:border-gray-600 dark:text-gray-300">
+                              Administrar reservas de libros
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="historial" className="mt-0">
+                    <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                      <CardContent className="p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <History size={18} className="text-emerald-500" />
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Historial de reservas</h3>
+                        </div>
+                        {renderReservationList(grouped.history, "No hay historial de reservas completadas.")}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   );
 };

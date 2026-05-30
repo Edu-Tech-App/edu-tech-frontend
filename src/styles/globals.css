@@ -1,36 +1,70 @@
-/* KEEP_IN_SYNC(fullscreen/resources/figmake/shadcn/globals.css) */
+/* ============================================================
+   GLOBALS.CSS — Tokens y variables del tema
+   Edita aquí para cambiar colores del sistema completo.
+   ============================================================ */
 
+/* ── TEMA CLARO ─────────────────────────────────────────── */
 :root {
+  /* Tipografía */
   --font-size: 16px;
-  --background: #ffffff;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+
+  /* Radio */
+  --radius: 0.625rem;
+
+  /* Fondo general de la app */
+  --background: #f3f6fb;
   --foreground: oklch(0.145 0 0);
+
+  /* Contenedores principales (cards) */
   --card: #ffffff;
+  --card-surface: #ffffff;
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+
+  /* Secciones internas (filas, items dentro de cards) */
+  --section-surface: #eef2f7;
+
+  /* Popovers / dropdowns */
+  --popover: #ffffff;
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
+
+  /* Color de acción principal (botones, tabs activos, etc.) */
+  --primary: #6c5ce7;
+  --primary-foreground: #ffffff;
+
+  /* Secundario */
   --secondary: oklch(0.95 0.0058 264.53);
   --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
+
+  /* Elementos apagados / secundarios */
+  --muted: #eef2f7;
+  --muted-foreground: #5b6b8c;
+
+  /* Acentos dfsdsfsfsdf */
+  --accent: #f4f6fb;
   --accent-foreground: #030213;
+
+  /* Destructivo */
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+
+  /* Bordes e inputs */
+  /* --border: rgba(0, 0, 0, 0.1); */
+  --border: rgba(15, 23, 42, 0.08);
   --input: transparent;
   --input-background: #f3f3f5;
   --switch-background: #cbced4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
+
+  /* Charts */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
+
+  /* Sidebar */
   --sidebar: #6c5ce7;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #6c5ce7;
@@ -47,35 +81,59 @@
   --sidebar-icon-surface: rgba(255, 255, 255, 0.12);
 }
 
+/* ── TEMA OSCURO ─────────────────────────────────────────── */
 .dark {
-  --background: #202445;
+  /* Fondo general */
+  --background: #2a2f57;
   --foreground: #f5f7ff;
-  --card: #2a2f57;
+
+  /* Contenedores principales sdfsdv */
+  --card: #353c6e;
+  --card-surface: #353c6e;
   --card-foreground: #f5f7ff;
+
+  /* Secciones internas */
+  --section-surface: #303663;
+
+  /* Popovers */
   --popover: #2a2f57;
   --popover-foreground: #f5f7ff;
+
+  /* Acción principal */
   --primary: #6c5ce7;
   --primary-foreground: #f5f7ff;
+
+  /* Secundario */
   --secondary: #25294d;
   --secondary-foreground: #f5f7ff;
+
+  /* Muted */
   --muted: #25294d;
   --muted-foreground: #8e95b5;
-  --accent: #323866;
+
+  /* Acento */
+  --accent: #3b447a;
   --accent-foreground: #f5f7ff;
+
+  /* Destructivo */
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: #3c4270;
+
+  /* Bordes e inputs */
+  --border: #4b538f;
   --input: #2a2f57;
   --input-background: #25294d;
   --switch-background: #3c4270;
   --ring: #7c6cf0;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
+
+  /* Charts */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+
+  /* Sidebar */
   --sidebar: #4338a8;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #5448c4;
@@ -92,6 +150,7 @@
   --sidebar-icon-surface: rgba(255, 255, 255, 0.16);
 }
 
+/* ── TOKENS DE TAILWIND (expone variables al sistema) ────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
