@@ -119,6 +119,10 @@ export const SubjectsPage = () => {
   const [editingSubject, setEditingSubject] = useState<SubjectRecord | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<SubjectRecord | null>(null);
   const [subjectGrades, setSubjectGrades] = useState<GradeRecord[]>([]);
+  const [subjectEnrollments, setSubjectEnrollments] = useState<any[]>([]);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+  const [assigningStudentId, setAssigningStudentId] = useState<number | null>(null);
+  const [unrollingStudentId, setUnrollingStudentId] = useState<number | null>(null);
   const [assignStudentSearch, setAssignStudentSearch] = useState("");
   const [formData, setFormData] = useState({ nombre: "", carrera: "", semestre: 1, creditos: 1 });
   const [teacherAssignment, setTeacherAssignment] = useState({ docenteId: "" });
@@ -155,6 +159,18 @@ export const SubjectsPage = () => {
       setGrades(gradesData);
     } catch (error: any) {
       toast.error(error.message || "No se pudieron actualizar las materias");
+    }
+  };
+
+  const loadEnrollments = async (subjectId: number) => {
+    try {
+      setEnrollmentLoading(true);
+      const enrollments = await api.getSubjectEnrollments(subjectId);
+      setSubjectEnrollments(enrollments);
+    } catch (error: any) {
+      toast.error(error.message || "Error al cargar inscripciones");
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -196,17 +212,33 @@ export const SubjectsPage = () => {
     ];
   }, [grades, managedSubjects]);
 
-  const currentSubjectStudents = useMemo(() => getSubjectStudents(subjectGrades), [subjectGrades]);
+  const currentSubjectStudents = useMemo(() => {
+    // Cruce de inscritos con notas (opcional, para ver promedios si existen)
+    return subjectEnrollments.map((enroll) => {
+      const studentId = enroll.estudianteId;
+      const studentGrades = grades.filter((g) => g.asignaturaId === enroll.asignaturaId && g.estudianteId === studentId);
+      
+      return {
+        id: studentId,
+        name: enroll.estudiante?.user?.nombreCompleto || `Estudiante ${studentId}`,
+        code: enroll.estudiante?.codigoEstudiantil || `EST-${studentId}`,
+        grades: studentGrades,
+        average: studentGrades.length
+          ? (studentGrades.reduce((sum, grade) => sum + Number(grade.valor || 0), 0) / studentGrades.length).toFixed(2)
+          : "0.00",
+      };
+    });
+  }, [subjectEnrollments, grades]);
 
   const availableStudents = useMemo(() => {
-    const linkedIds = new Set(currentSubjectStudents.map((student) => student.id));
+    const linkedIds = new Set(subjectEnrollments.map((enroll) => enroll.estudianteId));
     return students.filter((student) => {
       const matchesSearch =
         normalizeSearchValue(student.nombreCompleto).includes(normalizeSearchValue(assignStudentSearch)) ||
         normalizeSearchValue(student.correoInstitucional).includes(normalizeSearchValue(assignStudentSearch));
       return !linkedIds.has(student.id) && matchesSearch;
     });
-  }, [assignStudentSearch, currentSubjectStudents, students]);
+  }, [assignStudentSearch, subjectEnrollments, students]);
 
   const openSubjectDialog = (subject?: SubjectRecord) => {
     if (subject) {
@@ -282,9 +314,16 @@ export const SubjectsPage = () => {
   const openDetailDialog = async (subject: SubjectRecord, openStudents = false) => {
     try {
       setSelectedSubject(subject);
+      setEnrollmentLoading(true);
+      
       const subjectGradeList = grades.filter((grade) => grade.asignaturaId === subject.id);
       setSubjectGrades(subjectGradeList);
       setAssignStudentSearch("");
+
+      // Cargar inscritos reales
+      const enrollments = await api.getSubjectEnrollments(subject.id);
+      setSubjectEnrollments(enrollments);
+
       if (openStudents) {
         setShowStudentsDialog(true);
       } else {
@@ -292,6 +331,38 @@ export const SubjectsPage = () => {
       }
     } catch (error: any) {
       toast.error(error.message || "No se pudo cargar el detalle de la materia");
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
+  const handleEnrollStudent = async (studentId: number) => {
+    if (!selectedSubject) return;
+
+    setAssigningStudentId(studentId);
+    try {
+      await api.enrollStudent(selectedSubject.id, studentId);
+      toast.success("Estudiante inscrito exitosamente");
+      await loadEnrollments(selectedSubject.id);
+    } catch (error: any) {
+      toast.error(error.message || "Error al inscribir");
+    } finally {
+      setAssigningStudentId(null);
+    }
+  };
+
+  const handleRemoveEnrollment = async (studentId: number) => {
+    if (!selectedSubject) return;
+
+    setUnrollingStudentId(studentId);
+    try {
+      await api.removeEnrollment(selectedSubject.id, studentId);
+      toast.success("Inscripción retirada");
+      await loadEnrollments(selectedSubject.id);
+    } catch (error: any) {
+      toast.error(error.message || "Error al retirar inscripción");
+    } finally {
+      setUnrollingStudentId(null);
     }
   };
 
@@ -557,10 +628,6 @@ export const SubjectsPage = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 overflow-y-auto px-5 py-4">
-              <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-200">
-                La plataforma actual no expone un endpoint de inscripción directa por materia. Esta vista te permite revisar estudiantes vinculados por historial académico real y los estudiantes disponibles para gestión posterior.
-              </div>
-
               <div>
                 <Label className="dark:text-gray-300">Buscar estudiante disponible</Label>
                 <Input
@@ -575,13 +642,26 @@ export const SubjectsPage = () => {
                 <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
                   <CardHeader><CardTitle className="text-base dark:text-white">Estudiantes inscritos</CardTitle></CardHeader>
                   <CardContent className="space-y-2.5">
-                    {currentSubjectStudents.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes inscritos por historial académico.</p>
+                    {enrollmentLoading ? (
+                      <p className="text-sm text-gray-500">Cargando inscritos...</p>
+                    ) : currentSubjectStudents.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes inscritos.</p>
                     ) : (
                       currentSubjectStudents.map((student) => (
-                        <div key={student.id} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                          <p className="font-medium text-gray-700 dark:text-white">{student.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.code} · Promedio {student.average}</p>
+                        <div key={student.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                          <div>
+                            <p className="font-medium text-gray-700 dark:text-white">{student.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.code}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            disabled={unrollingStudentId === student.id}
+                            onClick={() => void handleRemoveEnrollment(student.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
                       ))
                     )}
@@ -595,9 +675,20 @@ export const SubjectsPage = () => {
                       <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes adicionales para mostrar.</p>
                     ) : (
                       availableStudents.slice(0, 10).map((student) => (
-                        <div key={student.id} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                          <p className="font-medium text-gray-700 dark:text-white">{student.nombreCompleto}</p>
-                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.correoInstitucional}</p>
+                        <div key={student.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                          <div>
+                            <p className="font-medium text-gray-700 dark:text-white">{student.nombreCompleto}</p>
+                            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.correoInstitucional}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-[#6C5CE7] hover:bg-[#6C5CE7]/10"
+                            disabled={assigningStudentId === student.id}
+                            onClick={() => void handleEnrollStudent(student.id)}
+                          >
+                            <Plus size={16} />
+                          </Button>
                         </div>
                       ))
                     )}

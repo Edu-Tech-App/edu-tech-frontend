@@ -244,6 +244,32 @@ export const api = {
     }
   },
 
+  getSubjectEnrollments: async (id: number) => {
+    try {
+      const response = await apiClient.get(`/subjects/${id}/enrollments`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener inscritos"));
+    }
+  },
+
+  enrollStudent: async (id: number, estudianteId: number) => {
+    try {
+      const response = await apiClient.post(`/subjects/${id}/enrollments`, { estudianteId });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al inscribir estudiante"));
+    }
+  },
+
+  removeEnrollment: async (id: number, estudianteId: number) => {
+    try {
+      await apiClient.delete(`/subjects/${id}/enrollments/${estudianteId}`);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al retirar estudiante"));
+    }
+  },
+
   getRoomReservations: async () => {
     try {
       const response = await apiClient.get("/study-rooms/reservations");

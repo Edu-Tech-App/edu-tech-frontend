@@ -43,7 +43,6 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: GraduationCap, label: 'Materias', path: '/subjects' },
           { icon: Library, label: 'Biblioteca', path: '/book-management' },
           { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
-          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
           { icon: BookMarked, label: 'Préstamos', path: '/active-loans' },
           { icon: DollarSign, label: 'Multas', path: '/fines' },
           { icon: FileText, label: 'Reportes', path: '/reports' },
