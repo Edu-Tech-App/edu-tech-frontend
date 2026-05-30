@@ -23,6 +23,8 @@ import { RoomReservationsManagementPage } from "./pages/RoomReservationsManageme
 import { RoomsManagementPage } from "./pages/RoomsManagementPage";
 import { AdminReservationsPage } from "./pages/AdminReservationsPage";
 import { BookReservationsManagementPage } from "./pages/BookReservationsManagementPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("accessToken");
@@ -59,6 +61,8 @@ export const router = createBrowserRouter([
       { path: "my-room-reservations", element: <ProtectedRoute><MyRoomReservationsPage /></ProtectedRoute> },
       { path: "room-reservations-management", element: <ProtectedRoute><RoomReservationsManagementPage /></ProtectedRoute> },
       { path: "rooms-management", element: <ProtectedRoute><RoomsManagementPage /></ProtectedRoute> },
+      { path: "reports", element: <ProtectedRoute><ReportsPage /></ProtectedRoute> },
+      { path: "settings", element: <ProtectedRoute><SettingsPage /></ProtectedRoute> },
     ],
   },
 ]);

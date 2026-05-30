@@ -12,6 +12,7 @@ import { Search, XCircle, CheckCircle, Clock, Plus, Edit, Trash2 } from "lucide-
 import { toast } from "sonner";
 import { api } from "../../services/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { formatSystemRole } from "../lib/roles";
 
 type ReservationStatus = "ACTIVA" | "COMPLETADA" | "CANCELADA";
 
@@ -32,15 +33,7 @@ interface ApiReservation {
 const normalizeSearchValue = (value?: string | null) =>
   (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-const formatUserRole = (role?: string) => {
-  switch (role) {
-    case "estudiante": return "Estudiante";
-    case "docente": return "Docente";
-    case "bibliotecario": return "Bibliotecario";
-    case "administrativo": return "Administrativo";
-    default: return "Sin rol";
-  }
-};
+const formatUserRole = (role?: string) => formatSystemRole(role);
 
 const mapReservationStatus = (status: ReservationStatus): ReservationRecord["status"] => {
   switch (status) {
@@ -191,7 +184,7 @@ export const RoomReservationsManagementPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
+    <div className="min-h-screen bg-background transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <main className="lg:ml-64 pt-[4.5rem]">

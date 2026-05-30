@@ -27,6 +27,16 @@ const apiClient = axios.create({
   },
 });
 
+const authorizedBlobGet = async (url: string, params?: Record<string, string | number | undefined>) => {
+  const token = localStorage.getItem("accessToken");
+  const response = await axios.get(`${API_URL}${url}`, {
+    params,
+    responseType: "blob",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  return response.data as Blob;
+};
+
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) {
@@ -364,6 +374,15 @@ export const api = {
     }
   },
 
+  returnLoan: async (id: number) => {
+    try {
+      const response = await apiClient.patch(`/loans/${id}/return`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al registrar la devolución"));
+    }
+  },
+
   deleteLoan: async (id: number) => {
     try {
       await apiClient.delete(`/loans/${id}`);
@@ -417,7 +436,7 @@ export const api = {
       documentoIdentidad?: string;
       correo?: string;
       password?: string;
-      rol?: "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO";
+      rol?: "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
     },
   ) => {
     try {
@@ -480,6 +499,50 @@ export const api = {
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al obtener multas"));
+    }
+  },
+
+  getAllFinePayments: async () => {
+    try {
+      const response = await apiClient.get("/loans/fines/payments/all");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener historial de pagos"));
+    }
+  },
+
+  payFine: async (fineId: number) => {
+    try {
+      const response = await apiClient.post(`/loans/fines/${fineId}/pay`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al procesar el pago de la multa"));
+    }
+  },
+
+  downloadLoansReport: async (params: {
+    startDate: string;
+    endDate: string;
+    format: "pdf" | "excel";
+  }) => {
+    try {
+      return await authorizedBlobGet("/reportes/prestamos", params);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al exportar reporte de biblioteca"));
+    }
+  },
+
+  downloadGradesReport: async (params: {
+    startDate: string;
+    endDate: string;
+    format: "pdf" | "excel";
+    periodoAcademico?: string;
+    asignaturaId?: number;
+  }) => {
+    try {
+      return await authorizedBlobGet("/reportes/calificaciones", params);
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al exportar reporte académico"));
     }
   },
 };

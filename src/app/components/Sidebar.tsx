@@ -1,7 +1,8 @@
 import { useNavigate, useLocation } from "react-router";
 import { FaGraduationCap } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
-import { BookOpen, LayoutDashboard, GraduationCap, Calendar, DollarSign, Users, LogOut, BarChart3, BookMarked, Library, DoorOpen, CalendarCheck, X } from "lucide-react";
+import { BookOpen, LayoutDashboard, GraduationCap, Calendar, DollarSign, Users, LogOut, BarChart3, BookMarked, Library, DoorOpen, CalendarCheck, FileText, Settings, X } from "lucide-react";
+import { isManagementRole } from "../lib/roles";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,21 +32,47 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: Library, label: 'Libros', path: '/book-management' },
           { icon: BookMarked, label: 'Préstamos Activos', path: '/active-loans' },
-          { icon: CalendarCheck, label: 'Reservas y Préstamos', path: '/reservations' },
+          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
           { icon: Users, label: 'Usuarios', path: '/users' },
         ];
       case 'administrativo':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
           { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
+          { icon: Users, label: 'Usuarios', path: '/users' },
+          { icon: GraduationCap, label: 'Materias', path: '/subjects' },
+          { icon: Library, label: 'Biblioteca', path: '/book-management' },
+          { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
+          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
+          { icon: BookMarked, label: 'Préstamos', path: '/active-loans' },
+          { icon: DollarSign, label: 'Multas', path: '/fines' },
+          { icon: FileText, label: 'Reportes', path: '/reports' },
+          { icon: Settings, label: 'Configuración', path: '/settings' },
+        ];
+      case 'supervisor':
+        return [
+          { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
+          { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
           { icon: Library, label: 'Libros', path: '/book-management' },
           { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
-          { icon: CalendarCheck, label: 'Reservas y Préstamos', path: '/reservations' },
+          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
           { icon: Users, label: 'Usuarios', path: '/users' },
           { icon: GraduationCap, label: 'Materias', path: '/subjects' },
           { icon: DollarSign, label: 'Multas', path: '/fines' },
         ];
       default:
+        if (isManagementRole(user?.rol)) {
+          return [
+            { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
+            { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
+            { icon: Library, label: 'Libros', path: '/book-management' },
+            { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
+            { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
+            { icon: Users, label: 'Usuarios', path: '/users' },
+            { icon: GraduationCap, label: 'Materias', path: '/subjects' },
+            { icon: DollarSign, label: 'Multas', path: '/fines' },
+          ];
+        }
         return [{ icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' }];
     }
   };
@@ -80,22 +107,19 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         lg:translate-x-0
       `}
       style={{ background: "var(--sidebar-gradient)" }}>
-        <div className="p-6 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
+        <div className="p-5 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
           <div className="flex items-center gap-3">
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
               style={{ background: "var(--sidebar-icon-surface)" }}
             >
-              <FaGraduationCap size={22} className="text-white" />
+              <FaGraduationCap size={20} className="text-white" />
             </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">Edu Tech</h1>
-              <p className="text-sm mt-1" style={{ color: "var(--sidebar-muted)" }}>Sistema Institucional</p>
-            </div>
+            <h1 className="text-[22px] font-bold tracking-tight leading-none">Edu Tech</h1>
             {/* Botón cerrar solo en móvil */}
             <button
               onClick={onClose}
-              className="lg:hidden p-1 rounded-lg transition-colors"
+              className="lg:hidden ml-auto p-1 rounded-lg transition-colors"
               style={{ backgroundColor: "transparent" }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--sidebar-item-hover)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}

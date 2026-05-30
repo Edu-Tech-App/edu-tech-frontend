@@ -34,7 +34,7 @@ export const ReservationsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
+    <div className="min-h-screen bg-background transition-colors">
       <Sidebar />
       <TopBar />
       <main className="ml-64 pt-16 p-6">

@@ -2,22 +2,95 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { BookOpen, Users, DollarSign, TrendingUp, GraduationCap, Calendar } from "lucide-react";
+import { Badge } from "../components/ui/badge";
+import { BarChart3, BookOpen, CalendarCheck, DoorOpen, DollarSign, GraduationCap, Users } from "lucide-react";
 import { api } from "../../services/api";
 import { toast } from "sonner";
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
+
+const getPercentage = (value: number, total: number) => {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+};
+
+const formatAcademicAverage = (value: number) => {
+  if (!Number.isFinite(value)) return "0.0";
+  return value.toFixed(1);
+};
+
+const accentStyles = {
+  primary: {
+    value: "text-[#5b4bd1] dark:text-[#c8c2ff]",
+    icon: "text-[#5b4bd1] dark:text-[#c8c2ff]",
+    chip: "bg-[#6C5CE7]/12 text-[#5b4bd1] dark:bg-[#6C5CE7]/18 dark:text-[#d7d2ff]",
+    fill: "bg-[#6C5CE7] dark:bg-[#8a7dff]",
+  },
+  success: {
+    fill: "bg-emerald-600 dark:bg-emerald-400",
+  },
+  danger: {
+    value: "text-rose-700 dark:text-rose-300",
+    icon: "text-rose-700 dark:text-rose-300",
+    chip: "bg-rose-100 text-rose-700 dark:bg-rose-500/12 dark:text-rose-300",
+    fill: "bg-rose-600 dark:bg-rose-400",
+  },
+} as const;
+
 export const StatisticsPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => { void loadStats(); }, []);
 
   const loadStats = async () => {
     try {
       setLoading(true);
-      const data = await api.getStats();
-      setStats(data);
+      const [stats, reservations, loans, grades] = await Promise.all([
+        api.getStats(),
+        api.getRoomReservations(),
+        api.getLoans(),
+        api.getGrades(),
+      ]);
+
+      const totalLoans = loans.length;
+      const totalReservations = reservations.length;
+
+      const reservasActivas = reservations.filter((reservation: any) => reservation.estado === "ACTIVA").length;
+      const reservasCompletadas = reservations.filter((reservation: any) => reservation.estado === "COMPLETADA").length;
+      const reservasCanceladas = reservations.filter((reservation: any) => reservation.estado === "CANCELADA").length;
+
+      const multasGeneradas = loans.reduce((sum: number, loan: any) => {
+        if (loan.multa) {
+          return sum + Number(loan.multa.monto || 0);
+        }
+        return sum;
+      }, 0);
+
+      const usuariosActivos =
+        (stats?.totalEstudiantes ?? 0) +
+        (stats?.totalDocentes ?? 0) +
+        (stats?.totalBibliotecarios ?? 0) +
+        (stats?.totalAdministrativos ?? 0) +
+        (stats?.totalSupervisores ?? 0);
+
+      const academicAverage = grades.length
+        ? grades.reduce((sum: number, grade: any) => sum + Number(grade.valor || 0), 0) / grades.length
+        : 0;
+
+      setData({
+        stats,
+        totalLoans,
+        totalReservations,
+        reservasActivas,
+        reservasCompletadas,
+        reservasCanceladas,
+        multasGeneradas,
+        usuariosActivos,
+        academicAverage,
+      });
     } catch (error: any) {
       toast.error(error.message || "Error al cargar estadísticas");
     } finally {
@@ -25,111 +98,207 @@ export const StatisticsPage = () => {
     }
   };
 
-  const totalUsuarios = stats?.totalUsuarios ?? 0;
-  const userStats = [
-    { role: "Estudiantes", count: stats?.totalEstudiantes ?? 0, percentage: totalUsuarios ? Math.round((stats?.totalEstudiantes / totalUsuarios) * 100) : 0 },
-    { role: "Docentes", count: stats?.totalDocentes ?? 0, percentage: totalUsuarios ? Math.round((stats?.totalDocentes / totalUsuarios) * 100) : 0 },
-    { role: "Bibliotecarios", count: stats?.totalBibliotecarios ?? 0, percentage: totalUsuarios ? Math.round((stats?.totalBibliotecarios / totalUsuarios) * 100) : 0 },
-    { role: "Administrativos", count: stats?.totalAdministrativos ?? 0, percentage: totalUsuarios ? Math.round((stats?.totalAdministrativos / totalUsuarios) * 100) : 0 },
-  ];
-  const topLibros = stats?.topLibros ?? [];
-  const librosPorCategoria = stats?.librosPorCategoria ?? [];
+  const cardClass = "border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800";
+  const sectionBg = "rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
+    <div className="h-screen overflow-hidden bg-background transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-16">
-        <div className="page-shell">
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-y-auto p-4">
         <div className="page-header">
-          <h1 className="page-title">Estadísticas del Sistema</h1>
-          <p className="page-subtitle">Panel general de métricas y análisis</p>
+          <h1 className="page-title">Estadísticas</h1>
+          <p className="page-subtitle">Indicadores clave de operación, uso institucional y desempeño académico general.</p>
         </div>
 
         {loading ? (
           <p className="py-16 text-center text-gray-500 dark:text-[#B6AFD8]">Cargando estadísticas...</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Total de Libros</p><p className="text-3xl font-bold text-[#6C5CE7]">{stats?.totalLibros ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">En catálogo</p></div><BookOpen size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Usuarios Registrados</p><p className="text-3xl font-bold text-green-600">{stats?.totalUsuarios ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Total activos</p></div><Users size={40} className="text-green-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Préstamos Activos</p><p className="text-3xl font-bold text-purple-600">{stats?.prestamosActivos ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">En curso</p></div><Calendar size={40} className="text-purple-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Multas Pendientes</p><p className="text-3xl font-bold text-red-600">${stats?.multasPendientes ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Por cobrar</p></div><DollarSign size={40} className="text-red-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Materias Activas</p><p className="text-3xl font-bold text-yellow-600">{stats?.totalMaterias ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Este semestre</p></div><GraduationCap size={40} className="text-yellow-600" /></div></CardContent></Card>
-              <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Préstamos del Mes</p><p className="text-3xl font-bold text-indigo-600">{stats?.prestamosDelMes ?? 0}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Mes actual</p></div><TrendingUp size={40} className="text-indigo-600" /></div></CardContent></Card>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { title: "Uso de biblioteca", value: data.totalLoans, subtitle: "Préstamos registrados", icon: BookOpen, accent: accentStyles.primary },
+                  { title: "Uso de salas", value: data.totalReservations, subtitle: "Reservas totales", icon: DoorOpen, accent: accentStyles.primary },
+                  { title: "Usuarios activos", value: data.usuariosActivos, subtitle: "Con participación en el sistema", icon: Users, accent: accentStyles.primary },
+                  { title: "Rendimiento académico general", value: formatAcademicAverage(data.academicAverage), subtitle: "Promedio global", icon: GraduationCap, accent: accentStyles.primary },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Card key={item.title} className={cardClass}>
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-[#B7BDD6]">{item.title}</p>
+                            <p className={`mt-2 text-3xl font-bold ${item.accent.value}`}>{item.value}</p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">{item.subtitle}</p>
+                          </div>
+                          <div className={`rounded-2xl p-3 ${item.accent.chip}`}>
+                            <Icon size={28} className={item.accent.icon} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardHeader><CardTitle className="section-title">Libros Más Prestados</CardTitle></CardHeader>
-                <CardContent>
-                  {topLibros.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-gray-500 dark:text-[#B6AFD8]">No hay préstamos registrados</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {topLibros.map((book: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-[#6C5CE7]/14 dark:bg-[#6C5CE7]/30 rounded-full flex items-center justify-center text-[#6C5CE7] font-bold text-sm">{index + 1}</div>
-                            <span className="font-medium text-sm dark:text-white">{book.titulo}</span>
-                          </div>
-                          <span className="text-sm font-bold text-gray-600 dark:text-[#D5D0EE]">{book.totalPrestamos} préstamos</span>
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Préstamos por mes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Actividad mensual</p>
+                          <p className={`mt-2 text-3xl font-bold ${accentStyles.primary.value}`}>{data.stats?.prestamosDelMes ?? 0}</p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Préstamos registrados en el mes actual</p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardHeader><CardTitle className="section-title">Distribución de Usuarios por Rol</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {userStats.map((user, index) => (
-                      <div key={index}>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium dark:text-white">{user.role}</span>
-                          <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{user.count} ({user.percentage}%)</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div className="bg-[#6C5CE7] h-2 rounded-full" style={{ width: `${user.percentage}%` }} />
+                        <div className={`rounded-2xl p-3 ${accentStyles.primary.chip}`}>
+                          <BarChart3 size={24} className={accentStyles.primary.icon} />
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Multas generadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Valor acumulado</p>
+                          <p className={`mt-2 text-3xl font-bold ${accentStyles.danger.value}`}>{formatCurrency(data.multasGeneradas)}</p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-[#B6AFD8]">Incluye multas pendientes y registradas en préstamos</p>
+                        </div>
+                        <div className={`rounded-2xl p-3 ${accentStyles.danger.chip}`}>
+                          <DollarSign size={24} className={accentStyles.danger.icon} />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
             </div>
 
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="section-title">Libros por Categoría</CardTitle></CardHeader>
-              <CardContent>
-                {librosPorCategoria.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-gray-500 dark:text-[#B6AFD8]">No hay libros registrados por categoría</p>
-                ) : (
-                  <div className="space-y-4">
-                    {librosPorCategoria.map((cat: any, index: number) => {
-                      const maxCat = Math.max(...librosPorCategoria.map((c: any) => Number(c.total)));
-                      const percentage = Math.round((Number(cat.total) / maxCat) * 100);
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Reservas por estado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: "Activas", count: data.reservasActivas, color: accentStyles.primary.fill },
+                      { label: "Completadas", count: data.reservasCompletadas, color: accentStyles.success.fill },
+                      { label: "Canceladas", count: data.reservasCanceladas, color: accentStyles.danger.fill },
+                    ].map((item) => {
+                      const percentage = getPercentage(item.count, data.totalReservations);
                       return (
-                        <div key={index}>
-                          <div className="flex justify-between mb-1">
-                            <span className="text-sm font-medium dark:text-white">{cat.categoria || "Sin categoría"}</span>
-                            <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{cat.total} libros</span>
+                        <div key={item.label}>
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700 dark:text-white">{item.label}</span>
+                            <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{item.count} ({percentage}%)</span>
                           </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${percentage}%` }} />
+                          <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${percentage}%` }} />
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Uso de salas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Reservas activas</p>
+                          <p className={`mt-2 text-2xl font-bold ${accentStyles.primary.value}`}>{data.reservasActivas}</p>
+                        </div>
+                        <div className={`rounded-2xl p-3 ${accentStyles.primary.chip}`}>
+                          <CalendarCheck size={20} className={accentStyles.primary.icon} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Capacidad de uso</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-800 dark:text-[#F5F7FF]">{getPercentage(data.reservasActivas + data.reservasCompletadas, data.totalReservations)}%</p>
+                        </div>
+                        <Badge className={accentStyles.primary.chip}>Salas</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Uso de biblioteca</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Préstamos activos</p>
+                          <p className={`mt-2 text-2xl font-bold ${accentStyles.primary.value}`}>{data.stats?.prestamosActivos ?? 0}</p>
+                        </div>
+                        <div className={`rounded-2xl p-3 ${accentStyles.primary.chip}`}>
+                          <BookOpen size={20} className={accentStyles.primary.icon} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className={sectionBg}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Libros en catálogo</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-800 dark:text-[#F5F7FF]">{data.stats?.totalLibros ?? 0}</p>
+                        </div>
+                        <Badge className={accentStyles.primary.chip}>Biblioteca</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={cardClass}>
+                  <CardHeader>
+                    <CardTitle className="section-title">Usuarios activos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: "Estudiantes", count: data.stats?.totalEstudiantes ?? 0 },
+                      { label: "Docentes", count: data.stats?.totalDocentes ?? 0 },
+                      { label: "Bibliotecarios", count: data.stats?.totalBibliotecarios ?? 0 },
+                      { label: "Administrativos", count: data.stats?.totalAdministrativos ?? 0 },
+                      { label: "Supervisores", count: data.stats?.totalSupervisores ?? 0 },
+                    ].map((item) => {
+                      const percentage = getPercentage(item.count, data.usuariosActivos);
+                      return (
+                        <div key={item.label}>
+                          <div className="mb-1 flex justify-between">
+                            <span className="text-sm font-medium text-gray-700 dark:text-white">{item.label}</span>
+                            <span className="text-sm text-gray-600 dark:text-[#D5D0EE]">{item.count} ({percentage}%)</span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div className={`h-2 rounded-full ${accentStyles.primary.fill}`} style={{ width: `${percentage}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+            </div>
           </>
         )}
-        </div>
       </main>
     </div>
   );
