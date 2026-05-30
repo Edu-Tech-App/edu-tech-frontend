@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { BookMarked, CalendarCheck, ChevronLeft, ChevronRight, Edit, Eye, GraduationCap, Plus, Search, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const ROLE_OPTIONS = [
   { value: "ESTUDIANTE", label: "Estudiante" },
@@ -74,6 +75,7 @@ const toUpperStatus = (status: UserRecord["estado"]) => status.toUpperCase() as 
 const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 export const UserManagementPage = () => {
+  const { user: authUser } = useAuth();
   const pageShellRef = useRef<HTMLDivElement | null>(null);
   const tableHeaderRef = useRef<HTMLTableSectionElement | null>(null);
   const tableViewportRef = useRef<HTMLDivElement | null>(null);
@@ -106,7 +108,13 @@ export const UserManagementPage = () => {
     try {
       setLoading(true);
       const data = await api.getUsers();
-      setUsers(data);
+      setUsers(
+        (Array.isArray(data) ? data : []).map((item) => ({
+          ...item,
+          rol: String(item.rol || "").toLowerCase(),
+          estado: String(item.estado || "").toLowerCase(),
+        })),
+      );
     } catch (error: any) {
       toast.error(error.message || "Error al cargar usuarios");
     } finally {
@@ -375,7 +383,9 @@ export const UserManagementPage = () => {
                             <td className="px-4 py-3 align-middle whitespace-nowrap lg:py-2">
                               <div className="flex justify-end gap-1">
                                 <Button size="sm" variant="ghost" onClick={() => void loadUserDetails(user)}><Eye size={16} /></Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleOpenEdit(user)}><Edit size={16} /></Button>
+                                {authUser?.rol === "administrativo" && (
+                                  <Button size="sm" variant="ghost" onClick={() => handleOpenEdit(user)}><Edit size={16} /></Button>
+                                )}
                               </div>
                             </td>
                           </tr>

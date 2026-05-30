@@ -253,6 +253,24 @@ export const api = {
     }
   },
 
+  getSubjectEnrollmentsByStudent: async () => {
+    try {
+      const response = await apiClient.get("/subjects/enrollments/my");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener mis inscripciones"));
+    }
+  },
+
+  getStudentSubjectProfile: async () => {
+    try {
+      const response = await apiClient.get("/subjects/student/profile");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener el perfil academico"));
+    }
+  },
+
   enrollStudent: async (id: number, estudianteId: number) => {
     try {
       const response = await apiClient.post(`/subjects/${id}/enrollments`, { estudianteId });
@@ -344,6 +362,22 @@ export const api = {
     }
   },
 
+  createRoomReservation: async (data: {
+    salaId: number;
+    userId: number;
+    isEstudiante: boolean;
+    fechaReserva: string;
+    horaInicio: string;
+    horaFin: string;
+  }) => {
+    try {
+      const response = await apiClient.post("/study-rooms/reservations", data);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al crear la reserva"));
+    }
+  },
+
   updateRoomReservationAsAdmin: async (id: number, data: {
     salaId?: number;
     userId?: number;
@@ -363,6 +397,15 @@ export const api = {
   adminCancelRoomReservation: async (id: number) => {
     try {
       const response = await apiClient.patch(`/study-rooms/reservations/${id}/admin-cancel`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al cancelar la reserva"));
+    }
+  },
+
+  cancelRoomReservation: async (id: number) => {
+    try {
+      const response = await apiClient.patch(`/study-rooms/reservations/${id}/cancel`);
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al cancelar la reserva"));
@@ -493,7 +536,7 @@ export const api = {
 
   getStudentLoans: async (userId: number) => {
     try {
-      const response = await apiClient.get(`/loans/user/${userId}`);
+      const response = await apiClient.get(`/loans/student/${userId}`);
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al obtener préstamos del estudiante"));
@@ -550,6 +593,7 @@ export const api = {
     startDate: string;
     endDate: string;
     format: "pdf" | "excel";
+    estudianteId?: number;
   }) => {
     try {
       return await authorizedBlobGet("/reportes/prestamos", params);
@@ -564,6 +608,7 @@ export const api = {
     format: "pdf" | "excel";
     periodoAcademico?: string;
     asignaturaId?: number;
+    estudianteId?: number;
   }) => {
     try {
       return await authorizedBlobGet("/reportes/calificaciones", params);
@@ -572,3 +617,4 @@ export const api = {
     }
   },
 };
+

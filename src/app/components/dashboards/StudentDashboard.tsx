@@ -107,7 +107,7 @@ export const StudentDashboard = () => {
           <Button onClick={() => navigate("/library")} variant="outline" className="justify-start">
             Buscar Libros
           </Button>
-          <Button onClick={() => navigate("/library/rooms")} variant="outline" className="justify-start">
+          <Button onClick={() => navigate("/rooms")} variant="outline" className="justify-start">
             Reservar Sala de Estudio
           </Button>
         </CardContent>

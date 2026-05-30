@@ -1,172 +1,350 @@
-import { useState } from "react";
-import { PageLayout } from "../components/PageLayout";
+import { useEffect, useMemo, useState } from "react";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Users, DoorOpen } from "lucide-react";
+import { Users, DoorOpen, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../../services/api";
 
-interface Room { id: string; name: string; capacity: number; equipment: string[]; status: 'available' | 'occupied' | 'maintenance'; }
-interface Reservation { id: string; roomId: string; roomName: string; date: string; startTime: string; endTime: string; }
+interface StudyRoom {
+  id: number;
+  nombre: string;
+  capacidad: number;
+  ubicacion: string;
+  estado: "ACTIVA" | "INACTIVA" | "MANTENIMIENTO";
+}
+
+interface RoomReservation {
+  id: number;
+  salaId: number;
+  fechaReserva: string;
+  horaInicio: string;
+  horaFin: string;
+  estado: "ACTIVA" | "COMPLETADA" | "CANCELADA";
+  sala?: {
+    id: number;
+    nombre: string;
+  };
+}
 
 export const RoomsPage = () => {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedTime, setSelectedTime] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedTime, setSelectedTime] = useState("");
   const [showReservationDialog, setShowReservationDialog] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], startTime: '', endTime: '' });
+  const [selectedRoom, setSelectedRoom] = useState<StudyRoom | null>(null);
+  const [rooms, setRooms] = useState<StudyRoom[]>([]);
+  const [myReservations, setMyReservations] = useState<RoomReservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split("T")[0],
+    startTime: "",
+    endTime: "",
+  });
 
-  const rooms: Room[] = [
-    { id: '1', name: 'Sala A - Estudio Grupal', capacity: 8, equipment: ['Proyector', 'Pizarra', 'WiFi'], status: 'available' },
-    { id: '2', name: 'Sala B - Estudio Individual', capacity: 4, equipment: ['WiFi', 'Escritorios'], status: 'available' },
-    { id: '3', name: 'Sala C - Conferencias', capacity: 20, equipment: ['Proyector', 'Sistema de Audio', 'Pantalla Grande', 'WiFi'], status: 'available' },
-    { id: '4', name: 'Sala D - Estudio Grupal', capacity: 6, equipment: ['Pizarra', 'WiFi'], status: 'occupied' },
-    { id: '5', name: 'Sala E - Multimedia', capacity: 10, equipment: ['Computadoras', 'Proyector', 'WiFi'], status: 'available' },
-  ];
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const [existingReservations] = useState<Reservation[]>([{ id: '1', roomId: '4', roomName: 'Sala D - Estudio Grupal', date: new Date().toISOString().split('T')[0], startTime: '10:00', endTime: '12:00' }]);
+    const fetchData = async () => {
+      try {
+        const [roomsData, reservationsData] = await Promise.all([
+          api.getStudyRooms(),
+          api.getRoomReservationsByUser(user.id),
+        ]);
 
-  const getMaxDate = () => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split('T')[0]; };
+        setRooms(Array.isArray(roomsData) ? roomsData : []);
+        setMyReservations(Array.isArray(reservationsData) ? reservationsData : []);
+      } catch (error) {
+        console.error("Error cargando salas:", error);
+        toast.error("No se pudieron cargar las salas de estudio");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const isRoomAvailable = (roomId: string, date: string, startTime: string, endTime: string) => {
-    const roomReservations = existingReservations.filter(r => r.roomId === roomId && r.date === date);
-    for (const reservation of roomReservations) {
-      if ((startTime >= reservation.startTime && startTime < reservation.endTime) || (endTime > reservation.startTime && endTime <= reservation.endTime) || (startTime <= reservation.startTime && endTime >= reservation.endTime)) return false;
-    }
-    return true;
+    void fetchData();
+  }, [user?.id]);
+
+  const getMaxDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split("T")[0];
   };
 
-  const handleReserveClick = (room: Room) => {
-    if (room.status !== 'available') { toast.error('Esta sala no está disponible'); return; }
+  const hasActiveReservationForRoom = (roomId: number) =>
+    myReservations.some((reservation) => reservation.salaId === roomId && reservation.estado === "ACTIVA");
+
+  const handleReserveClick = (room: StudyRoom) => {
+    if (room.estado !== "ACTIVA") {
+      toast.error("Esta sala no está disponible");
+      return;
+    }
+
+    if (hasActiveReservationForRoom(room.id)) {
+      toast.error("Ya tienes una reserva activa para esta sala");
+      return;
+    }
+
     setSelectedRoom(room);
-    setFormData({ date: selectedDate, startTime: '', endTime: '' });
+    setFormData({ date: selectedDate, startTime: "", endTime: "" });
     setShowReservationDialog(true);
   };
 
-  const handleConfirmReservation = () => {
-    if (!formData.date || !formData.startTime || !formData.endTime) { toast.error('Por favor completa todos los campos'); return; }
-    if (formData.endTime <= formData.startTime) { toast.error('La hora de fin debe ser mayor que la hora de inicio'); return; }
-    const today = new Date().toISOString().split('T')[0];
-    if (formData.date < today || formData.date > getMaxDate()) { toast.error('Solo puedes reservar con hasta 7 días de anticipación'); return; }
-    if (formData.startTime < '08:00' || formData.endTime > '20:00') { toast.error('El horario permitido es de 8:00 AM a 8:00 PM'); return; }
-    if (!selectedRoom || !isRoomAvailable(selectedRoom.id, formData.date, formData.startTime, formData.endTime)) { toast.error('La sala no está disponible en el horario seleccionado'); return; }
-    toast.success(`Reserva creada para ${selectedRoom.name}`);
-    setShowReservationDialog(false);
-    setSelectedRoom(null);
-  };
+  const handleConfirmReservation = async () => {
+    if (!user?.id || !selectedRoom) return;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'available': return <Badge className="bg-green-500">Disponible</Badge>;
-      case 'occupied': return <Badge className="bg-red-500">Ocupada</Badge>;
-      case 'maintenance': return <Badge className="bg-yellow-500">Mantenimiento</Badge>;
-      default: return <Badge>{status}</Badge>;
+    if (!formData.date || !formData.startTime || !formData.endTime) {
+      toast.error("Por favor completa todos los campos");
+      return;
+    }
+
+    if (formData.endTime <= formData.startTime) {
+      toast.error("La hora de fin debe ser mayor que la hora de inicio");
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    if (formData.date < today || formData.date > getMaxDate()) {
+      toast.error("Solo puedes reservar con hasta 7 días de anticipación");
+      return;
+    }
+
+    if (formData.startTime < "08:00" || formData.endTime > "20:00") {
+      toast.error("El horario permitido es de 8:00 AM a 8:00 PM");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const reservation = await api.createRoomReservation({
+        salaId: selectedRoom.id,
+        userId: user.id,
+        isEstudiante: user.rol === "estudiante",
+        fechaReserva: formData.date,
+        horaInicio: formData.startTime,
+        horaFin: formData.endTime,
+      });
+
+      setMyReservations((current) => [
+        {
+          ...reservation,
+          sala: reservation.sala ?? { id: selectedRoom.id, nombre: selectedRoom.nombre },
+        },
+        ...current,
+      ]);
+
+      toast.success(`Reserva creada para ${selectedRoom.nombre}`);
+      setShowReservationDialog(false);
+      setSelectedRoom(null);
+    } catch (error) {
+      console.error("Error creando reserva:", error);
+      toast.error(error instanceof Error ? error.message : "No se pudo crear la reserva");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const filteredRooms = selectedTime
-    ? rooms.filter(room => {
-        if (room.status !== 'available') return false;
-        const endTime = selectedTime.split(':').map(n => parseInt(n));
-        endTime[0] += 1;
-        return isRoomAvailable(room.id, selectedDate, selectedTime, `${endTime[0].toString().padStart(2, '0')}:${endTime[1].toString().padStart(2, '0')}`);
-      })
-    : rooms;
+  const getStatusBadge = (status: StudyRoom["estado"]) => {
+    switch (status) {
+      case "ACTIVA":
+        return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Disponible</Badge>;
+      case "MANTENIMIENTO":
+        return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Mantenimiento</Badge>;
+      case "INACTIVA":
+        return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Inactiva</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const filteredRooms = useMemo(() => {
+    const normalizedTime = selectedTime.trim();
+
+    return rooms.filter((room) => {
+      if (room.estado !== "ACTIVA") return !normalizedTime;
+      if (!normalizedTime) return true;
+      return !hasActiveReservationForRoom(room.id);
+    });
+  }, [rooms, selectedTime, myReservations]);
+
+  const cardClass = "border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800";
+  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3";
 
   return (
-    <PageLayout>
-      <div className="page-shell">
+    <div className="h-screen overflow-hidden bg-background transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-y-auto p-4">
         <div className="page-header">
           <h1 className="page-title">Salas de Estudio</h1>
-          <p className="page-subtitle">Reserva salas para estudio individual o grupal</p>
+          <p className="page-subtitle">Reserva salas para estudio individual o grupal según disponibilidad real del sistema.</p>
         </div>
 
-        <Card className="mb-6 dark:border-gray-700 dark:bg-gray-800">
-          <CardHeader><CardTitle className="section-title">Filtrar Disponibilidad</CardTitle></CardHeader>
+        <Card className={`${cardClass} mb-6`}>
+          <CardHeader>
+            <CardTitle className="section-title">Filtrar Disponibilidad</CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Fecha</label>
-                <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} max={getMaxDate()} />
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Fecha de reserva</label>
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  max={getMaxDate()}
+                  className="dark:bg-gray-700 dark:border-gray-600"
+                />
                 <p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">Reservas permitidas hasta 7 días de anticipación</p>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora (Opcional)</label>
-                <Input type="time" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} min="08:00" max="20:00" />
-                <p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">Horario: 8:00 AM - 8:00 PM</p>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora de inicio (Opcional)</label>
+                <Input
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  min="08:00"
+                  max="20:00"
+                  className="dark:bg-gray-700 dark:border-gray-600"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">Horario operativo: 8:00 AM - 8:00 PM</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRooms.map((room) => (
-            <Card
-              key={room.id}
-              className={`dark:border-gray-700 dark:bg-gray-800 ${
-                room.status === 'available' ? 'border-green-200 dark:border-green-900/40' : ''
-              }`}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#6C5CE7]/14 rounded-lg flex items-center justify-center"><DoorOpen size={24} className="text-[#6C5CE7]" /></div>
-                    <CardTitle className="text-lg dark:text-[#F5F7FF]">{room.name}</CardTitle>
+        {loading ? (
+          <div className={`${sectionBg} py-12 text-center`}>
+            <DoorOpen size={48} className="mx-auto mb-3 text-gray-300 dark:text-[#8E95B5]" />
+            <p className="text-gray-600 dark:text-[#B7BDD6]">Cargando salas disponibles...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredRooms.map((room) => (
+              <Card
+                key={room.id}
+                className={`${cardClass} transition-all hover:shadow-md ${
+                  room.estado === "ACTIVA" ? "border-emerald-200 dark:border-emerald-900/40" : ""
+                }`}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6C5CE7]/14 text-[#6C5CE7]">
+                        <DoorOpen size={20} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-bold dark:text-white">{room.nombre}</CardTitle>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">{room.ubicacion}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-[#B7BDD6]"><Users size={16} /><span>Capacidad: {room.capacity} personas</span></div>
-                <div>
-                  <p className="mb-2 text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Equipamiento:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {room.equipment.map((item, index) => <Badge key={index} variant="outline" className="text-xs dark:border-gray-700 dark:bg-gray-700/50 dark:text-[#C9C3E8]">{item}</Badge>)}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-[#B7BDD6]">
+                    <Users size={16} />
+                    <span>Capacidad: {room.capacidad} personas</span>
                   </div>
-                </div>
-                <div className="border-t pt-2 dark:border-gray-700">{getStatusBadge(room.status)}</div>
-                <Button onClick={() => handleReserveClick(room)} disabled={room.status !== 'available'} className="w-full bg-[#6C5CE7] hover:bg-[#5b4bd1]">Reservar Sala</Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="flex items-center justify-between border-t pt-3 dark:border-gray-700">
+                    {getStatusBadge(room.estado)}
+                    <Button
+                      size="sm"
+                      onClick={() => handleReserveClick(room)}
+                      disabled={room.estado !== "ACTIVA" || hasActiveReservationForRoom(room.id)}
+                      className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
+                    >
+                      {hasActiveReservationForRoom(room.id) ? "Ya reservada" : "Reservar"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {filteredRooms.length === 0 && (
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-12 text-center"><DoorOpen size={48} className="mx-auto mb-3 text-gray-400 dark:text-[#8E95B5]" /><p className="text-gray-600 dark:text-[#B7BDD6]">No hay salas disponibles para los criterios seleccionados</p></CardContent></Card>
+        {!loading && filteredRooms.length === 0 && (
+          <div className={`${sectionBg} py-12 text-center`}>
+            <DoorOpen size={48} className="mx-auto mb-3 text-gray-300 dark:text-[#8E95B5]" />
+            <p className="text-gray-600 dark:text-[#B7BDD6]">No hay salas disponibles para los criterios seleccionados</p>
+          </div>
         )}
 
         <Dialog open={showReservationDialog} onOpenChange={setShowReservationDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="dark:text-[#F5F7FF]">Reservar {selectedRoom?.name}</DialogTitle><DialogDescription className="dark:text-[#B7BDD6]">Completa los datos para tu reserva</DialogDescription></DialogHeader>
+          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="dark:text-[#F5F7FF]">Reservar {selectedRoom?.nombre}</DialogTitle>
+              <DialogDescription className="dark:text-[#B7BDD6]">
+                Completa los datos para confirmar tu reserva.
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Fecha *</label>
-                <Input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} min={new Date().toISOString().split('T')[0]} max={getMaxDate()} />
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Fecha</label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  min={new Date().toISOString().split("T")[0]}
+                  max={getMaxDate()}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora Inicio *</label><Input type="time" value={formData.startTime} onChange={(e) => setFormData({ ...formData, startTime: e.target.value })} min="08:00" max="20:00" /></div>
-                <div><label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora Fin *</label><Input type="time" value={formData.endTime} onChange={(e) => setFormData({ ...formData, endTime: e.target.value })} min="08:00" max="20:00" /></div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora Inicio</label>
+                  <Input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    min="08:00"
+                    max="20:00"
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-[#F5F7FF]">Hora Fin</label>
+                  <Input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    min="08:00"
+                    max="20:00"
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
               </div>
-              <div className="rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-3 dark:border-gray-700 dark:bg-gray-700/50">
-                <p className="text-xs text-[#5b4bd1] dark:text-[#C9C3E8]"><strong>Reglas de reserva:</strong></p>
-                <ul className="ml-4 mt-1 list-disc space-y-1 text-xs text-[#6C5CE7] dark:text-[#B7BDD6]">
+              <div className="rounded-xl border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-3 dark:border-gray-700 dark:bg-gray-700/50">
+                <div className="mb-2 flex items-center gap-2 text-[#5b4bd1] dark:text-[#C9C3E8]">
+                  <Calendar size={14} />
+                  <span className="text-xs font-bold uppercase tracking-wide">Políticas de reserva</span>
+                </div>
+                <ul className="ml-5 list-disc space-y-1 text-xs text-[#6C5CE7] dark:text-[#B7BDD6]">
                   <li>Horario permitido: 8:00 AM - 8:00 PM</li>
-                  <li>Reservas hasta 7 días de anticipación</li>
-                  <li>La hora de fin debe ser mayor que la de inicio</li>
-                  <li>Cancelación permitida solo 1 hora antes del inicio</li>
+                  <li>Reservas hasta con 7 días de antelación</li>
+                  <li>Cancelaciones permitidas hasta 1 hora antes del inicio</li>
                 </ul>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowReservationDialog(false)}>Cancelar</Button>
-              <Button onClick={handleConfirmReservation} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Confirmar Reserva</Button>
+              <Button variant="outline" onClick={() => setShowReservationDialog(false)} className="dark:border-gray-600">
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmReservation} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                {saving ? "Guardando..." : "Confirmar Reserva"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </PageLayout>
+      </main>
+    </div>
   );
 };

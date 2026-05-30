@@ -12,6 +12,7 @@ import { Label } from "../components/ui/label";
 import { AlertTriangle, DollarSign, History, Plus, Search, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface BackendFine {
   id: number;
@@ -150,6 +151,7 @@ const writeManualPayments = (payments: ManualPayment[]) => {
 };
 
 export const FinesPage = () => {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -177,10 +179,13 @@ export const FinesPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      const isAdmin = user?.rol === "administrativo";
+      const isManager = isAdmin || user?.rol === "bibliotecario";
+
       const [finesResponse, paymentsResponse, usersData, booksData] = await Promise.all([
-        api.getAllFines(),
-        api.getAllFinePayments().catch(() => []),
-        api.getUsers(),
+        isManager ? api.getAllFines().catch(() => ({ fines: [] })) : Promise.resolve({ fines: [] }),
+        isManager ? api.getAllFinePayments().catch(() => []) : Promise.resolve([]),
+        isAdmin ? api.getUsers().catch(() => []) : Promise.resolve([]),
         api.getBooks(),
       ]);
 
@@ -198,8 +203,8 @@ export const FinesPage = () => {
   };
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    if (user) void loadData();
+  }, [user]);
 
   const combinedFines = useMemo<CombinedFine[]>(() => {
     const mappedBackend = backendFines.map((fine) => ({
@@ -279,7 +284,7 @@ export const FinesPage = () => {
   }, [combinedFines, combinedPayments]);
 
   const activeStudents = useMemo(
-    () => users.filter((user) => user.rol === "estudiante" && user.estado === "activo"),
+    () => users.filter((u) => u.rol === "estudiante" && u.estado === "activo"),
     [users],
   );
 
@@ -294,8 +299,8 @@ export const FinesPage = () => {
       return;
     }
 
-    const user = users.find((item) => item.id === Number(newFine.userId));
-    if (!user) {
+    const targetUser = users.find((item) => item.id === Number(newFine.userId));
+    if (!targetUser) {
       toast.error("Selecciona un estudiante válido");
       return;
     }
@@ -308,9 +313,9 @@ export const FinesPage = () => {
         id: `manual-${Date.now()}`,
         source: "manual",
         tipo: newFine.tipo,
-        userId: user.id,
-        userName: user.nombreCompleto,
-        userEmail: user.correoInstitucional,
+        userId: targetUser.id,
+        userName: targetUser.nombreCompleto,
+        userEmail: targetUser.correoInstitucional,
         bookId: book?.id ?? null,
         bookTitle: book?.titulo || "Sin libro asociado",
         monto: Number(newFine.monto),
@@ -450,9 +455,13 @@ export const FinesPage = () => {
                 <td className="px-4 py-3 align-middle lg:py-2">
                   <div className="flex justify-end gap-1">
                     {fine.estado === "PENDIENTE" ? (
-                      <Button size="sm" variant="ghost" onClick={() => openPaymentDialog(fine)} title="Registrar pago">
-                        <DollarSign size={16} />
-                      </Button>
+                      user?.rol === "bibliotecario" ? (
+                        <Button size="sm" variant="ghost" onClick={() => openPaymentDialog(fine)} title="Registrar pago">
+                          <DollarSign size={16} />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-amber-600 font-medium">Pendiente</span>
+                      )
                     ) : (
                       <span className="text-xs text-gray-400 dark:text-gray-500">Pagada</span>
                     )}
@@ -505,9 +514,11 @@ export const FinesPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-            <Plus size={16} className="mr-2" />Registrar multa
-          </Button>
+          {user?.rol === "bibliotecario" && (
+            <Button onClick={() => setShowCreateDialog(true)} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+              <Plus size={16} className="mr-2" />Registrar multa
+            </Button>
+          )}
         </div>
 
         <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">

@@ -12,6 +12,7 @@ import { Label } from "../components/ui/label";
 import { BookOpen, CalendarClock, Edit, History, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, API_URL_PUBLIC, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface Book {
   id: number;
@@ -86,6 +87,7 @@ const getLoanStatusClass = (estado: string) => {
 };
 
 export const BookManagementPage = () => {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -113,7 +115,11 @@ export const BookManagementPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [booksData, loansData] = await Promise.all([api.getBooks(), api.getLoans().catch(() => [])]);
+      const isManager = user?.rol === "administrativo" || user?.rol === "bibliotecario";
+      const [booksData, loansData] = await Promise.all([
+        api.getBooks(),
+        isManager ? api.getLoans().catch(() => []) : Promise.resolve([])
+      ]);
       setBooks(booksData);
       setLoans(loansData);
     } catch (error: any) {
@@ -124,8 +130,8 @@ export const BookManagementPage = () => {
   };
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    if (user) void loadData();
+  }, [user]);
 
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
@@ -447,15 +453,17 @@ export const BookManagementPage = () => {
                               </div>
                               <div className="flex items-center gap-2">
                                 <Badge className={getLoanStatusClass(loan.estado)}>Activo</Badge>
-                                <Button
-                                  size="sm"
-                                  onClick={() => void handleReturnLoan(loan.id)}
-                                  disabled={returningLoanId === loan.id}
-                                  className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
-                                >
-                                  <RotateCcw size={14} className="mr-2" />
-                                  {returningLoanId === loan.id ? "Procesando..." : "Devoluciones"}
-                                </Button>
+                                {user?.rol === "bibliotecario" && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => void handleReturnLoan(loan.id)}
+                                    disabled={returningLoanId === loan.id}
+                                    className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
+                                  >
+                                    <RotateCcw size={14} className="mr-2" />
+                                    {returningLoanId === loan.id ? "Procesando..." : "Devoluciones"}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>

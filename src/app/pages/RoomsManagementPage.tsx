@@ -82,9 +82,11 @@ export const RoomsManagementPage = () => {
     const loadData = async () => {
       try {
         setLoading(true);
+        const canViewReservations = authUser?.rol === "administrativo" || authUser?.rol === "supervisor";
+        
         const [roomsData, reservationsData] = await Promise.all([
           api.getStudyRooms(),
-          api.getRoomReservations().catch(() => []),
+          canViewReservations ? api.getRoomReservations().catch(() => []) : Promise.resolve([]),
         ]);
 
         setRooms(roomsData);
@@ -96,8 +98,8 @@ export const RoomsManagementPage = () => {
       }
     };
 
-    void loadData();
-  }, []);
+    if (authUser) void loadData();
+  }, [authUser]);
 
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) =>
@@ -130,7 +132,7 @@ export const RoomsManagementPage = () => {
     ];
   }, [reservations, rooms]);
 
-  const getRoomReservations = (roomId: number) =>
+  const getRoomReservationsList = (roomId: number) =>
     reservations
       .filter((reservation) => reservation.salaId === roomId)
       .sort((left, right) => new Date(right.fechaReserva).getTime() - new Date(left.fechaReserva).getTime());
@@ -180,9 +182,10 @@ export const RoomsManagementPage = () => {
 
       setShowFormDialog(false);
 
+      const canViewReservations = authUser?.rol === "administrativo" || authUser?.rol === "supervisor";
       const [roomsData, reservationsData] = await Promise.all([
         api.getStudyRooms(),
-        api.getRoomReservations().catch(() => reservations),
+        canViewReservations ? api.getRoomReservations().catch(() => []) : Promise.resolve([]),
       ]);
       setRooms(roomsData);
       setReservations(reservationsData);
@@ -202,15 +205,16 @@ export const RoomsManagementPage = () => {
       toast.success("Sala eliminada exitosamente");
       setShowDeleteDialog(false);
 
+      const canViewReservations = authUser?.rol === "administrativo" || authUser?.rol === "supervisor";
       const [roomsData, reservationsData] = await Promise.all([
         api.getStudyRooms(),
-        api.getRoomReservations().catch(() => reservations),
+        canViewReservations ? api.getRoomReservations().catch(() => []) : Promise.resolve([]),
       ]);
       setRooms(roomsData);
       setReservations(reservationsData);
       setRoomToDelete(null);
     } catch (error: any) {
-      toast.error(error.message || "No se pudo eliminar la sala");
+      toast.error(error.message || "No se pudo eliminar the sala");
     } finally {
       setSaving(false);
     }
@@ -247,9 +251,11 @@ export const RoomsManagementPage = () => {
               className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent dark:text-white dark:placeholder-gray-400"
             />
           </div>
-          <Button onClick={() => openDialog()} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-            <Plus size={16} className="mr-2" />Crear sala
-          </Button>
+          {authUser?.rol === "administrativo" && (
+            <Button onClick={() => openDialog()} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+              <Plus size={16} className="mr-2" />Crear sala
+            </Button>
+          )}
         </div>
 
         <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -308,17 +314,21 @@ export const RoomsManagementPage = () => {
                                   </Badge>
                                 </td>
                                 <td className="px-4 py-3 align-middle lg:py-2">
-                                  <div className="flex justify-end gap-1">
-                                    <Button size="sm" variant="ghost" onClick={() => openDetailDialog(room)} title="Ver detalle">
-                                      <CalendarDays size={16} />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => openDialog(room)} title="Editar sala">
-                                      <Edit size={16} />
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => { setRoomToDelete(room); setShowDeleteDialog(true); }} title="Eliminar sala">
-                                      <Trash2 size={16} className="text-rose-600" />
-                                    </Button>
-                                  </div>
+                                  {authUser?.rol === "administrativo" && (
+                                    <div className="flex justify-end gap-1">
+                                      <Button size="sm" variant="ghost" onClick={() => openDialog(room)} title="Editar sala">
+                                        <Edit size={16} />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" onClick={() => { setRoomToDelete(room); setShowDeleteDialog(true); }} title="Eliminar sala">
+                                        <Trash2 size={16} className="text-rose-600" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {authUser?.rol !== "administrativo" && (
+                                    <div className="flex justify-end">
+                                      <span className="text-xs text-amber-600 font-medium">Solo lectura</span>
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             ))
@@ -494,10 +504,10 @@ export const RoomsManagementPage = () => {
               <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
                 <CardHeader><CardTitle className="text-base dark:text-white">Calendario de ocupación</CardTitle></CardHeader>
                 <CardContent className="space-y-2.5">
-                  {!selectedRoom || getRoomReservations(selectedRoom.id).length === 0 ? (
+                  {!selectedRoom || getRoomReservationsList(selectedRoom.id).length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">No hay reservas registradas para esta sala.</p>
                   ) : (
-                    getRoomReservations(selectedRoom.id).map((reservation) => (
+                    getRoomReservationsList(selectedRoom.id).map((reservation) => (
                       <div key={reservation.id} className="rounded-lg bg-gray-50 p-3.5 dark:bg-gray-700/50">
                         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                           <div>

@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
-import { PageLayout } from "../components/PageLayout";
+import { useEffect, useMemo, useState } from "react";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Badge } from "../components/ui/badge";
-import { BookOpen, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { BookOpen, Calendar, AlertCircle, CheckCircle, Search, Clock } from "lucide-react";
+import { Input } from "../components/ui/input";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../../services/api";
 
@@ -17,15 +21,24 @@ interface Loan {
   libro: { id: number; titulo: string; autor: string };
 }
 
+const formatDate = (value?: string | null) => {
+  if (!value) return "Sin fecha";
+  return new Date(value).toLocaleDateString("es-ES");
+};
+
 export const MyLoansPage = () => {
   const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tab, setTab] = useState("activos");
 
   useEffect(() => {
     if (!user?.id) return;
     const fetch = async () => {
       try {
+        setLoading(true);
         const data = await api.getStudentLoans(user.id);
         setLoans(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -37,129 +50,172 @@ export const MyLoansPage = () => {
     void fetch();
   }, [user?.id]);
 
-  const activeLoans = loans.filter((l) => l.estado === "ACTIVO" || l.estado === "VENCIDO");
-  const returnedLoans = loans.filter((l) => l.estado === "DEVUELTO");
+  const filteredLoans = useMemo(() => {
+    return loans.filter((loan) =>
+      loan.libro?.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      loan.libro?.autor.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [loans, searchTerm]);
+
+  const activeLoans = useMemo(() => 
+    filteredLoans.filter((l) => l.estado === "ACTIVO" || l.estado === "VENCIDO"),
+    [filteredLoans]
+  );
+  
+  const returnedLoans = useMemo(() => 
+    filteredLoans.filter((l) => l.estado === "DEVUELTO"),
+    [filteredLoans]
+  );
 
   const getDaysUntilDue = (dueDate: string) => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
     return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const getStatusBadge = (loan: Loan) => {
-    if (loan.estado === "DEVUELTO") return <Badge className="bg-gray-500">Devuelto</Badge>;
+    if (loan.estado === "DEVUELTO") return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Devuelto</Badge>;
     const days = getDaysUntilDue(loan.fechaLimiteDevolucion);
-    if (days < 0) return <Badge className="bg-red-500">Vencido</Badge>;
-    if (days <= 3) return <Badge className="bg-yellow-500">Próximo a vencer</Badge>;
-    return <Badge className="bg-green-500">Activo</Badge>;
+    if (days < 0 || loan.estado === "VENCIDO") return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Vencido</Badge>;
+    if (days <= 3) return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Próximo a vencer</Badge>;
+    return <Badge className="bg-[#6C5CE7]/12 text-[#5b4bd1] dark:bg-[#6C5CE7]/20 dark:text-[#d9d4ff]">Activo</Badge>;
   };
 
+  const metrics = useMemo(() => [
+    { label: "Préstamos activos", value: loans.filter(l => l.estado === "ACTIVO" || l.estado === "VENCIDO").length },
+    { label: "Libros vencidos", value: loans.filter(l => getDaysUntilDue(l.fechaLimiteDevolucion) < 0).length },
+    { label: "Total devueltos", value: loans.filter(l => l.estado === "DEVUELTO").length },
+    { label: "Historial total", value: loans.length },
+  ], [loans]);
+
+  const cardClass = "border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800";
+
   return (
-    <PageLayout>
-      <div className="page-shell">
-        <div className="page-header">
-          <h1 className="page-title">Mis Préstamos</h1>
-          <p className="page-subtitle">Gestiona tus libros prestados</p>
+    <div className="h-screen overflow-hidden bg-background transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+      
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-4">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+          {metrics.map((item) => (
+            <Card key={item.label} className={cardClass}>
+              <CardContent className="px-3 py-2">
+                <p className="text-[12px] leading-tight text-gray-500 dark:text-[#B7BDD6]">{item.label}</p>
+                <p className="mt-0.5 text-[1.45rem] font-bold leading-none text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Préstamos Activos</p><p className="text-3xl font-bold text-[#6C5CE7]">{loading ? "..." : activeLoans.length}</p></div><BookOpen size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
-          <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Libros Vencidos</p><p className="text-3xl font-bold text-red-600">{loading ? "..." : activeLoans.filter((l) => getDaysUntilDue(l.fechaLimiteDevolucion) < 0).length}</p></div><AlertCircle size={40} className="text-red-600" /></div></CardContent></Card>
-          <Card className="dark:bg-gray-800 dark:border-gray-700"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Devueltos</p><p className="text-3xl font-bold text-green-600">{loading ? "..." : returnedLoans.length}</p></div><CheckCircle size={40} className="text-green-600" /></div></CardContent></Card>
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800">
+          <Search className="shrink-0 text-gray-400" size={18} />
+          <Input
+            placeholder="Buscar por libro o autor"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent dark:text-white dark:placeholder-gray-400"
+          />
         </div>
 
-        <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader><CardTitle className="section-title">Préstamos Activos</CardTitle></CardHeader>
-          <CardContent>
+        <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0 last:pb-0 [&:last-child]:pb-0">
             {loading ? (
-              <p className="text-center text-gray-500 py-8">Cargando préstamos...</p>
-            ) : activeLoans.length === 0 ? (
-              <div className="text-center py-12">
-                <BookOpen size={48} className="mx-auto text-gray-400 mb-3" />
-                <p className="text-gray-600 dark:text-[#B7BDD6]">No tienes préstamos activos</p>
+              <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                Cargando préstamos...
               </div>
             ) : (
-              <div className="space-y-4">
-                {activeLoans.map((loan) => {
-                  const days = getDaysUntilDue(loan.fechaLimiteDevolucion);
-                  const isOverdue = days < 0;
-                  return (
-                    <div key={loan.id} className={`p-4 border rounded-lg ${isOverdue ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40" : "bg-white border-gray-200 dark:bg-gray-700/50 dark:border-gray-700"}`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-900 dark:text-[#F5F7FF]">{loan.libro?.titulo}</h3>
-                          <p className="text-sm text-gray-600 dark:text-[#B7BDD6] mt-1">{loan.libro?.autor}</p>
-                          <div className="flex gap-6 mt-3">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar size={16} className="text-gray-400" />
-                              <span className="text-gray-600 dark:text-[#B7BDD6]">Prestado: {new Date(loan.fechaPrestamo).toLocaleDateString("es-ES")}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar size={16} className="text-gray-400" />
-                              <span className={isOverdue ? "text-red-600 font-semibold" : "text-gray-600"}>
-                                Vence: {new Date(loan.fechaLimiteDevolucion).toLocaleDateString("es-ES")}
-                              </span>
-                            </div>
-                          </div>
-                          {isOverdue && (
-                            <div className="mt-3 flex items-center gap-2 text-red-600">
-                              <AlertCircle size={16} />
-                              <span className="text-sm font-semibold">Vencido hace {Math.abs(days)} día{Math.abs(days) !== 1 ? "s" : ""}</span>
-                            </div>
-                          )}
-                          {!isOverdue && days <= 3 && (
-                            <div className="mt-3 flex items-center gap-2 text-yellow-600">
-                              <AlertCircle size={16} />
-                              <span className="text-sm font-semibold">Vence en {days} día{days !== 1 ? "s" : ""}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-4">{getStatusBadge(loan)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+                <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                  <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 lg:w-[400px] dark:bg-gray-900/60">
+                    <TabsTrigger value="activos">Préstamos en curso</TabsTrigger>
+                    <TabsTrigger value="historial">Historial completo</TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-auto">
+                  <TabsContent value="activos" className="mt-0">
+                    <Table className="w-full min-w-[800px] table-fixed text-sm">
+                      <colgroup>
+                        <col className="w-[40%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[20%]" />
+                      </colgroup>
+                      <thead className="[&_tr]:border-b [&_tr]:border-gray-100 [&_tr]:bg-[#EEF2FF] dark:[&_tr]:border-gray-700 dark:[&_tr]:bg-[#2F355F]">
+                        <tr>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Libro</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Préstamo</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Vencimiento</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="[&_tr:last-child]:border-0">
+                        {activeLoans.length === 0 ? (
+                          <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">No tienes préstamos activos.</td></tr>
+                        ) : (
+                          activeLoans.map((loan) => (
+                            <tr key={loan.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                              <td className="px-4 py-3 align-middle lg:py-2">
+                                <p className="truncate font-medium text-gray-700 dark:text-white">{loan.libro?.titulo}</p>
+                                <p className="text-xs text-gray-500 dark:text-[#B7BDD6]">{loan.libro?.autor}</p>
+                              </td>
+                              <td className="px-4 py-3 align-middle text-gray-600 dark:text-gray-400 lg:py-2">{formatDate(loan.fechaPrestamo)}</td>
+                              <td className="px-4 py-3 align-middle text-gray-600 dark:text-gray-400 lg:py-2">{formatDate(loan.fechaLimiteDevolucion)}</td>
+                              <td className="px-4 py-3 align-middle lg:py-2">{getStatusBadge(loan)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </Table>
+                  </TabsContent>
+
+                  <TabsContent value="historial" className="mt-0">
+                    <Table className="w-full min-w-[800px] table-fixed text-sm">
+                      <colgroup>
+                        <col className="w-[35%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[20%]" />
+                      </colgroup>
+                      <thead className="[&_tr]:border-b [&_tr]:border-gray-100 [&_tr]:bg-[#EEF2FF] dark:[&_tr]:border-gray-700 dark:[&_tr]:bg-[#2F355F]">
+                        <tr>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Libro</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Préstamo</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Devolución</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Días Tarde</th>
+                          <th className="sticky top-0 z-10 h-11 bg-[#EEF2FF] px-4 text-left align-middle text-sm font-semibold text-gray-700 dark:bg-[#2F355F] dark:text-[#E6EBFF]">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="[&_tr:last-child]:border-0">
+                        {returnedLoans.length === 0 ? (
+                          <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No hay historial de devoluciones.</td></tr>
+                        ) : (
+                          returnedLoans.map((loan) => (
+                            <tr key={loan.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                              <td className="px-4 py-3 align-middle lg:py-2">
+                                <p className="truncate font-medium text-gray-700 dark:text-white">{loan.libro?.titulo}</p>
+                              </td>
+                              <td className="px-4 py-3 align-middle text-gray-600 dark:text-gray-400 lg:py-2">{formatDate(loan.fechaPrestamo)}</td>
+                              <td className="px-4 py-3 align-middle text-gray-600 dark:text-gray-400 lg:py-2">{formatDate(loan.fechaDevolucionReal)}</td>
+                              <td className="px-4 py-3 align-middle text-gray-600 dark:text-gray-400 lg:py-2">
+                                {loan.fechaDevolucionReal && getDaysUntilDue(loan.fechaLimiteDevolucion) < 0 ? Math.abs(getDaysUntilDue(loan.fechaLimiteDevolucion)) : 0}
+                              </td>
+                              <td className="px-4 py-3 align-middle lg:py-2">{getStatusBadge(loan)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </Table>
+                  </TabsContent>
+                </div>
+              </Tabs>
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800/40">
-          <CardHeader><CardTitle className="section-title">Historial de Devoluciones</CardTitle></CardHeader>
-          <div>
-            {loading ? (
-              <p className="text-center text-gray-500 py-8">Cargando historial...</p>
-            ) : returnedLoans.length === 0 ? (
-              <p className="text-center text-gray-600 dark:text-[#B7BDD6] py-8">No tienes historial de devoluciones</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b dark:border-gray-700">
-                      <th className="text-left p-3 dark:text-[#F5F7FF]">Libro</th>
-                      <th className="text-left p-3 dark:text-[#F5F7FF]">Autor</th>
-                      <th className="text-left p-3 dark:text-[#F5F7FF]">Fecha Préstamo</th>
-                      <th className="text-left p-3 dark:text-[#F5F7FF]">Fecha Devolución</th>
-                      <th className="text-left p-3 dark:text-[#F5F7FF]">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {returnedLoans.map((loan) => (
-                      <tr key={loan.id} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
-                        <td className="p-3 font-medium dark:text-[#F5F7FF]">{loan.libro?.titulo}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{loan.libro?.autor}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{new Date(loan.fechaPrestamo).toLocaleDateString("es-ES")}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{loan.fechaDevolucionReal ? new Date(loan.fechaDevolucionReal).toLocaleDateString("es-ES") : "-"}</td>
-                        <td className="p-3">{getStatusBadge(loan)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-    </PageLayout>
+      </main>
+    </div>
   );
 };
