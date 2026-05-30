@@ -11,10 +11,9 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { BookOpen, Eye, GraduationCap, Plus, Search, UserPlus, Users } from "lucide-react";
+import { BookOpen, Eye, GraduationCap, Pencil, Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
-import { isManagementRole } from "../lib/roles";
 
 interface SubjectRecord {
   id: number;
@@ -25,6 +24,7 @@ interface SubjectRecord {
   creditos: number;
   docenteId: number | null;
   docente?: { user?: { nombreCompleto: string } };
+  inscritosCount?: number;
 }
 
 interface TeacherOption {
@@ -49,6 +49,13 @@ interface GradeRecord {
   asignaturaId: number;
   estudiante?: { codigoEstudiantil?: string; user?: { nombreCompleto: string } };
   asignatura?: { nombre: string; codigo: string };
+}
+
+interface StudentProfile {
+  usuarioId: number;
+  codigoEstudiantil: string;
+  carrera: string;
+  semestreActual: number;
 }
 
 const normalizeSearchValue = (value?: string | null) =>
@@ -116,28 +123,49 @@ export const SubjectsPage = () => {
   const [showTeacherDialog, setShowTeacherDialog] = useState(false);
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
   const [editingSubject, setEditingSubject] = useState<SubjectRecord | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<SubjectRecord | null>(null);
   const [subjectGrades, setSubjectGrades] = useState<GradeRecord[]>([]);
+  const [subjectEnrollments, setSubjectEnrollments] = useState<any[]>([]);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+  const [assigningStudentId, setAssigningStudentId] = useState<number | null>(null);
+  const [unrollingStudentId, setUnrollingStudentId] = useState<number | null>(null);
   const [assignStudentSearch, setAssignStudentSearch] = useState("");
   const [formData, setFormData] = useState({ nombre: "", carrera: "", semestre: 1, creditos: 1 });
   const [teacherAssignment, setTeacherAssignment] = useState({ docenteId: "" });
+
+  const [myEnrollments, setMyEnrollments] = useState<number[]>([]);
+  const [enrollingId, setEnrollingId] = useState<number | null>(null);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [subjectsData, teachersData, usersData, gradesData] = await Promise.all([
+        const isAdmin = user?.rol === "administrativo";
+        const isAcademic = isAdmin || user?.rol === "docente";
+        const isStudent = user?.rol === "estudiante";
+
+        const [subjectsData, teachersData, usersData, gradesData, myEnrollmentsData, studentProfileData] = await Promise.all([
           api.getSubjects(),
-          api.getTeachers().catch(() => []),
-          api.getUsers().catch(() => []),
-          api.getGrades().catch(() => []),
+          isAdmin ? api.getTeachers().catch(() => []) : Promise.resolve([]),
+          isAdmin ? api.getUsers().catch(() => []) : Promise.resolve([]),
+          isAcademic
+            ? api.getGrades().catch(() => [])
+            : isStudent && user?.id
+              ? api.getStudentGrades(user.id).catch(() => [])
+              : Promise.resolve([]),
+          isStudent ? api.getSubjectEnrollmentsByStudent() : Promise.resolve([]),
+          isStudent ? api.getStudentSubjectProfile().catch(() => null) : Promise.resolve(null),
         ]);
 
         setSubjects(subjectsData);
         setTeachers(teachersData);
         setStudents((usersData as UserRecord[]).filter((item) => item.rol === "estudiante"));
         setGrades(gradesData);
+        setMyEnrollments((myEnrollmentsData as any[]).map((e) => e.asignaturaId));
+        setStudentProfile(studentProfileData);
       } catch (error: any) {
         toast.error(error.message || "No se pudieron cargar las materias");
       } finally {
@@ -146,7 +174,31 @@ export const SubjectsPage = () => {
     };
 
     void loadData();
-  }, []);
+  }, [user]);
+
+  const loadStudentData = async () => {
+    try {
+      const myEnrollmentsData = await api.getSubjectEnrollmentsByStudent();
+      setMyEnrollments((myEnrollmentsData as any[]).map((e) => e.asignaturaId));
+      await loadSubjects(); // Refrescar lista general para ver contadores actualizados
+    } catch (error: any) {
+      toast.error("Error al actualizar tus inscripciones");
+    }
+  };
+
+  const handleSelfEnroll = async (subjectId: number) => {
+    if (!user) return;
+    setEnrollingId(subjectId);
+    try {
+      await api.enrollStudent(subjectId, user.id);
+      toast.success("Te has inscrito exitosamente");
+      await loadStudentData();
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo realizar la inscripción");
+    } finally {
+      setEnrollingId(null);
+    }
+  };
 
   const loadSubjects = async () => {
     try {
@@ -158,12 +210,29 @@ export const SubjectsPage = () => {
     }
   };
 
+  const loadEnrollments = async (subjectId: number) => {
+    try {
+      setEnrollmentLoading(true);
+      const enrollments = await api.getSubjectEnrollments(subjectId);
+      setSubjectEnrollments(enrollments);
+    } catch (error: any) {
+      toast.error(error.message || "Error al cargar inscripciones");
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
   const managedSubjects = useMemo(() => {
+    if (user?.rol === "estudiante") {
+      return subjects.filter((subject) => myEnrollments.includes(subject.id));
+    }
+
     if (user?.rol === "docente") {
       return subjects.filter((subject) => subject.docenteId === user.id);
     }
+
     return subjects;
-  }, [subjects, user]);
+  }, [myEnrollments, subjects, user]);
 
   const visibleSubjects = useMemo(() => {
     const term = normalizeSearchValue(searchTerm);
@@ -177,6 +246,10 @@ export const SubjectsPage = () => {
       return matchesSearch && matchesCareer;
     });
   }, [careerFilter, managedSubjects, searchTerm]);
+
+  const availableSubjectsForEnrollment = useMemo(() => {
+    return subjects.filter((subject) => !myEnrollments.includes(subject.id));
+  }, [myEnrollments, subjects]);
 
   const subjectMetrics = useMemo(() => {
     const totalSubjects = managedSubjects.length;
@@ -196,17 +269,33 @@ export const SubjectsPage = () => {
     ];
   }, [grades, managedSubjects]);
 
-  const currentSubjectStudents = useMemo(() => getSubjectStudents(subjectGrades), [subjectGrades]);
+  const currentSubjectStudents = useMemo(() => {
+    // Cruce de inscritos con notas (opcional, para ver promedios si existen)
+    return subjectEnrollments.map((enroll) => {
+      const studentId = enroll.estudianteId;
+      const studentGrades = grades.filter((g) => g.asignaturaId === enroll.asignaturaId && g.estudianteId === studentId);
+      
+      return {
+        id: studentId,
+        name: enroll.estudiante?.user?.nombreCompleto || `Estudiante ${studentId}`,
+        code: enroll.estudiante?.codigoEstudiantil || `EST-${studentId}`,
+        grades: studentGrades,
+        average: studentGrades.length
+          ? (studentGrades.reduce((sum, grade) => sum + Number(grade.valor || 0), 0) / studentGrades.length).toFixed(2)
+          : "0.00",
+      };
+    });
+  }, [subjectEnrollments, grades]);
 
   const availableStudents = useMemo(() => {
-    const linkedIds = new Set(currentSubjectStudents.map((student) => student.id));
+    const linkedIds = new Set(subjectEnrollments.map((enroll) => enroll.estudianteId));
     return students.filter((student) => {
       const matchesSearch =
         normalizeSearchValue(student.nombreCompleto).includes(normalizeSearchValue(assignStudentSearch)) ||
         normalizeSearchValue(student.correoInstitucional).includes(normalizeSearchValue(assignStudentSearch));
       return !linkedIds.has(student.id) && matchesSearch;
     });
-  }, [assignStudentSearch, currentSubjectStudents, students]);
+  }, [assignStudentSearch, subjectEnrollments, students]);
 
   const openSubjectDialog = (subject?: SubjectRecord) => {
     if (subject) {
@@ -259,7 +348,7 @@ export const SubjectsPage = () => {
 
   const openTeacherDialog = (subject: SubjectRecord) => {
     setSelectedSubject(subject);
-    setTeacherAssignment({ docenteId: subject.docenteId ? String(subject.docenteId) : "" });
+    setTeacherAssignment({ docenteId: subject.docenteId ? String(subject.docenteId) : "none" });
     setShowTeacherDialog(true);
   };
 
@@ -268,7 +357,12 @@ export const SubjectsPage = () => {
 
     setSaving(true);
     try {
-      await api.assignSubjectTeacher(selectedSubject.id, teacherAssignment.docenteId ? Number(teacherAssignment.docenteId) : null);
+      await api.assignSubjectTeacher(
+        selectedSubject.id,
+        teacherAssignment.docenteId && teacherAssignment.docenteId !== "none"
+          ? Number(teacherAssignment.docenteId)
+          : null,
+      );
       toast.success("Docente asignado exitosamente");
       setShowTeacherDialog(false);
       await loadSubjects();
@@ -282,9 +376,20 @@ export const SubjectsPage = () => {
   const openDetailDialog = async (subject: SubjectRecord, openStudents = false) => {
     try {
       setSelectedSubject(subject);
+      setEnrollmentLoading(true);
+      
       const subjectGradeList = grades.filter((grade) => grade.asignaturaId === subject.id);
       setSubjectGrades(subjectGradeList);
       setAssignStudentSearch("");
+
+      // Solo cargar inscritos reales si el rol tiene permiso (Admin o Docente)
+      if (user?.rol === "administrativo" || user?.rol === "docente") {
+        const enrollments = await api.getSubjectEnrollments(subject.id);
+        setSubjectEnrollments(enrollments);
+      } else {
+        setSubjectEnrollments([]);
+      }
+
       if (openStudents) {
         setShowStudentsDialog(true);
       } else {
@@ -292,6 +397,38 @@ export const SubjectsPage = () => {
       }
     } catch (error: any) {
       toast.error(error.message || "No se pudo cargar el detalle de la materia");
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
+  const handleEnrollStudent = async (studentId: number) => {
+    if (!selectedSubject) return;
+
+    setAssigningStudentId(studentId);
+    try {
+      await api.enrollStudent(selectedSubject.id, studentId);
+      toast.success("Estudiante inscrito exitosamente");
+      await loadEnrollments(selectedSubject.id);
+    } catch (error: any) {
+      toast.error(error.message || "Error al inscribir");
+    } finally {
+      setAssigningStudentId(null);
+    }
+  };
+
+  const handleRemoveEnrollment = async (studentId: number) => {
+    if (!selectedSubject) return;
+
+    setUnrollingStudentId(studentId);
+    try {
+      await api.removeEnrollment(selectedSubject.id, studentId);
+      toast.success("Inscripción retirada");
+      await loadEnrollments(selectedSubject.id);
+    } catch (error: any) {
+      toast.error(error.message || "Error al retirar inscripción");
+    } finally {
+      setUnrollingStudentId(null);
     }
   };
 
@@ -338,9 +475,14 @@ export const SubjectsPage = () => {
               </SelectContent>
             </Select>
           </div>
-          {isManagementRole(user?.rol) && (
+          {user?.rol === "administrativo" && (
             <Button onClick={() => openSubjectDialog()} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
               <Plus size={16} className="mr-2" />Crear materia
+            </Button>
+          )}
+          {user?.rol === "estudiante" && (
+            <Button onClick={() => setShowEnrollDialog(true)} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+              <Plus size={16} className="mr-2" />Inscribirse
             </Button>
           )}
         </div>
@@ -378,21 +520,18 @@ export const SubjectsPage = () => {
                     {visibleSubjects.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                          No hay materias registradas.
+                          {user?.rol === "estudiante" ? "No tienes materias inscritas." : "No hay materias registradas."}
                         </td>
                       </tr>
                     ) : (
                       visibleSubjects.map((subject) => {
-                        const gradesForSubject = grades.filter((grade) => grade.asignaturaId === subject.id);
-                        const enrolledStudents = new Set(gradesForSubject.map((grade) => grade.estudianteId)).size;
-
                         return (
                           <tr key={subject.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
                             <td className="px-4 py-3 align-middle lg:py-2">
                               <div>
                                 <p className="truncate font-medium text-gray-700 dark:text-white">{subject.nombre}</p>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-[#B7BDD6]">
-                                  {enrolledStudents} inscritos · {gradesForSubject.length} notas registradas
+                                  {subject.inscritosCount ?? 0}/30 inscritos (Cupo máximo)
                                 </p>
                               </div>
                             </td>
@@ -407,13 +546,24 @@ export const SubjectsPage = () => {
                             </td>
                             <td className="px-4 py-3 align-middle lg:py-2">
                               <div className="flex justify-end gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => void openDetailDialog(subject)} title="Ver detalle">
-                                  <Eye size={16} />
-                                </Button>
-                                {isManagementRole(user?.rol) && (
+                                {user?.rol === "estudiante" && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
+                                    onClick={() => navigate(`/subjects/${subject.id}`)}
+                                  >
+                                    Ver notas
+                                  </Button>
+                                )}
+                                {user?.rol !== "estudiante" && (
+                                  <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)} title="Ver detalle">
+                                    <Eye size={16} />
+                                  </Button>
+                                )}
+                                {user?.rol === "administrativo" && (
                                   <>
                                     <Button size="sm" variant="ghost" onClick={() => openSubjectDialog(subject)} title="Editar materia">
-                                      <BookOpen size={16} />
+                                      <Pencil size={16} />
                                     </Button>
                                     <Button size="sm" variant="ghost" onClick={() => openTeacherDialog(subject)} title="Asignar docente">
                                       <UserPlus size={16} />
@@ -512,6 +662,59 @@ export const SubjectsPage = () => {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={showEnrollDialog} onOpenChange={setShowEnrollDialog}>
+          <DialogContent className="max-w-3xl dark:border-gray-700 dark:bg-gray-800">
+            <DialogHeader>
+              <DialogTitle className="dark:text-white">Inscribirse a materias</DialogTitle>
+              <DialogDescription className="dark:text-gray-400">
+                {studentProfile?.carrera && studentProfile.carrera !== "Por definir"
+                  ? `Solo se muestran materias de tu carrera: ${formatCategory(studentProfile.carrera)}.`
+                  : "Debes tener una carrera asignada para poder inscribirte a una materia."}
+              </DialogDescription>
+            </DialogHeader>
+
+            {!studentProfile?.carrera || studentProfile.carrera === "Por definir" ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+                Tienes que inscribirte a una carrera para inscribirte a una materia.
+              </div>
+            ) : availableSubjectsForEnrollment.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-300">
+                No hay materias disponibles para inscripción en tu carrera.
+              </div>
+            ) : (
+              <div className="max-h-[55vh] space-y-3 overflow-y-auto py-2">
+                {availableSubjectsForEnrollment.map((subject) => (
+                  <div key={subject.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                    <div>
+                      <p className="font-medium text-gray-700 dark:text-white">{subject.nombre}</p>
+                      <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">
+                        {subject.codigo} · Semestre {subject.semestre} · {subject.creditos} créditos
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
+                      disabled={enrollingId === subject.id}
+                      onClick={async () => {
+                        await handleSelfEnroll(subject.id);
+                        setShowEnrollDialog(false);
+                      }}
+                    >
+                      {enrollingId === subject.id ? "Inscribiendo..." : "Inscribirme"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEnrollDialog(false)} className="dark:border-gray-600 dark:text-gray-300">
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={showTeacherDialog} onOpenChange={setShowTeacherDialog}>
           <DialogContent className="max-w-xl dark:border-gray-700 dark:bg-gray-800">
             <DialogHeader>
@@ -528,6 +731,9 @@ export const SubjectsPage = () => {
                     <SelectValue placeholder="Selecciona un docente" />
                   </SelectTrigger>
                   <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
+                    <SelectItem value="none" className="dark:text-white dark:focus:bg-gray-700">
+                      Sin asignar
+                    </SelectItem>
                     {teachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={String(teacher.id)} className="dark:text-white dark:focus:bg-gray-700">
                         {teacher.nombreCompleto}
@@ -549,18 +755,14 @@ export const SubjectsPage = () => {
         </Dialog>
 
         <Dialog open={showStudentsDialog} onOpenChange={setShowStudentsDialog}>
-          <DialogContent className="max-h-[86vh] w-[95vw] max-w-4xl overflow-hidden p-0 dark:border-gray-700 dark:bg-gray-800">
+          <DialogContent className="max-h-[88vh] w-[96vw] max-w-5xl overflow-hidden p-0 dark:border-gray-700 dark:bg-gray-800">
             <DialogHeader className="border-b border-gray-200 px-5 py-4 text-left dark:border-gray-700">
               <DialogTitle className="dark:text-white">Asignar estudiantes</DialogTitle>
               <DialogDescription className="dark:text-gray-400">
                 Vista operativa de estudiantes vinculados y candidatos para "{selectedSubject?.nombre}".
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 overflow-y-auto px-5 py-4">
-              <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-200">
-                La plataforma actual no expone un endpoint de inscripción directa por materia. Esta vista te permite revisar estudiantes vinculados por historial académico real y los estudiantes disponibles para gestión posterior.
-              </div>
-
+            <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
               <div>
                 <Label className="dark:text-gray-300">Buscar estudiante disponible</Label>
                 <Input
@@ -571,17 +773,30 @@ export const SubjectsPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
                   <CardHeader><CardTitle className="text-base dark:text-white">Estudiantes inscritos</CardTitle></CardHeader>
                   <CardContent className="space-y-2.5">
-                    {currentSubjectStudents.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes inscritos por historial académico.</p>
+                    {enrollmentLoading ? (
+                      <p className="text-sm text-gray-500">Cargando inscritos...</p>
+                    ) : currentSubjectStudents.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes inscritos.</p>
                     ) : (
                       currentSubjectStudents.map((student) => (
-                        <div key={student.id} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                          <p className="font-medium text-gray-700 dark:text-white">{student.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.code} · Promedio {student.average}</p>
+                        <div key={student.id} className="flex flex-col gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-gray-700 dark:text-white">{student.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.code}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            disabled={unrollingStudentId === student.id}
+                            onClick={() => void handleRemoveEnrollment(student.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
                       ))
                     )}
@@ -595,9 +810,20 @@ export const SubjectsPage = () => {
                       <p className="text-sm text-gray-500 dark:text-gray-400">No hay estudiantes adicionales para mostrar.</p>
                     ) : (
                       availableStudents.slice(0, 10).map((student) => (
-                        <div key={student.id} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
-                          <p className="font-medium text-gray-700 dark:text-white">{student.nombreCompleto}</p>
-                          <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.correoInstitucional}</p>
+                        <div key={student.id} className="flex flex-col gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-gray-700 dark:text-white">{student.nombreCompleto}</p>
+                            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{student.correoInstitucional}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-[#6C5CE7] hover:bg-[#6C5CE7]/10"
+                            disabled={assigningStudentId === student.id}
+                            onClick={() => void handleEnrollStudent(student.id)}
+                          >
+                            <Plus size={16} />
+                          </Button>
                         </div>
                       ))
                     )}
@@ -631,24 +857,16 @@ export const SubjectsPage = () => {
                 <TabsContent value="resumen" className="mt-0 space-y-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {[
-                      { label: "Código", value: selectedSubject?.codigo || "-", icon: BookOpen },
-                      { label: "Semestre", value: selectedSubject?.semestre || "-", icon: GraduationCap },
-                      { label: "Créditos", value: selectedSubject?.creditos || "-", icon: BookOpen },
-                      { label: "Estudiantes inscritos", value: currentSubjectStudents.length, icon: Users },
+                      { label: "Código", value: selectedSubject?.codigo || "-" },
+                      { label: "Semestre", value: selectedSubject?.semestre || "-" },
+                      { label: "Créditos", value: selectedSubject?.creditos || "-" },
+                      { label: "Estudiantes inscritos", value: currentSubjectStudents.length },
                     ].map((item) => {
-                      const Icon = item.icon;
                       return (
                         <Card key={item.label} className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
                           <CardContent className="p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{item.label}</p>
-                                <p className="mt-1.5 text-2xl font-bold text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
-                              </div>
-                              <div className="mt-0.5 shrink-0 rounded-xl bg-[#6C5CE7]/12 p-2.5 text-[#5b4bd1] dark:bg-[#6C5CE7]/20 dark:text-[#d9d4ff]">
-                                <Icon size={16} />
-                              </div>
-                            </div>
+                            <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{item.label}</p>
+                            <p className="mt-1.5 text-2xl font-bold text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
                           </CardContent>
                         </Card>
                       );

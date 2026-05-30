@@ -10,6 +10,7 @@ import { Badge } from "../components/ui/badge";
 import { BookMarked, CalendarCheck, CheckCircle2, Clock3, DoorOpen, History, RefreshCcw, Search, XCircle } from "lucide-react";
 import { api } from "../../services/api";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 
 interface RoomReservationRecord {
   id: number;
@@ -86,6 +87,7 @@ const getStatusClass = (status: UnifiedReservation["status"]) => {
 
 export const AdminReservationsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [tab, setTab] = useState("resumen");
@@ -94,24 +96,27 @@ export const AdminReservationsPage = () => {
   const [bookReservations, setBookReservations] = useState<BookReservationRecord[]>([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [roomsData, booksData] = await Promise.all([
-          api.getRoomReservations(),
-          api.getLoans(),
-        ]);
-        setRoomReservations(roomsData);
-        setBookReservations(booksData);
-      } catch (error: any) {
-        toast.error(error.message || "No se pudieron cargar las reservas");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (user) void loadData();
+  }, [user]);
 
-    void loadData();
-  }, []);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const isAdmin = user?.rol === "administrativo";
+      const isSupervisor = user?.rol === "supervisor";
+
+      const [roomsData, booksData] = await Promise.all([
+        (isAdmin || isSupervisor) ? api.getRoomReservations().catch(() => []) : Promise.resolve([]),
+        isAdmin ? api.getLoans().catch(() => []) : Promise.resolve([]),
+      ]);
+      setRoomReservations(roomsData);
+      setBookReservations(booksData);
+    } catch (error: any) {
+      toast.error(error.message || "No se pudieron cargar las reservas");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const unifiedReservations = useMemo<UnifiedReservation[]>(() => {
     const roomItems = roomReservations.map((reservation) => ({
@@ -191,6 +196,9 @@ export const AdminReservationsPage = () => {
     ));
   };
 
+  const isSupervisor = user?.rol === "supervisor";
+  const isAdmin = user?.rol === "administrativo";
+
   return (
     <div className="h-screen overflow-hidden bg-background transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -201,7 +209,7 @@ export const AdminReservationsPage = () => {
             <Card key={item.label} className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
               <CardContent className="px-3 py-2">
                 <p className="text-[12px] leading-tight text-gray-500 dark:text-[#B7BDD6]">{item.label}</p>
-                <p className="mt-0.5 text-[1.45rem] font-bold leading-none text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
+                <p className="mt-0.5 truncate text-[1.45rem] font-bold leading-none text-gray-800 dark:text-[#F5F7FF]">{item.value}</p>
               </CardContent>
             </Card>
           ))}
@@ -217,12 +225,11 @@ export const AdminReservationsPage = () => {
               className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent dark:text-white dark:placeholder-gray-400"
             />
           </div>
-          <Button onClick={() => navigate("/reservations/rooms")} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-            <DoorOpen size={16} className="mr-2" />Reservas de salas
-          </Button>
-          <Button onClick={() => navigate("/reservations/books")} variant="outline" className="h-10 shrink-0 dark:border-gray-600 dark:text-gray-300">
-            <BookMarked size={16} className="mr-2" />Reservas de libros
-          </Button>
+          {isSupervisor && (
+            <Button onClick={() => navigate("/rooms")} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+              <DoorOpen size={16} className="mr-2" />Ver salas
+            </Button>
+          )}
         </div>
 
         <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -237,7 +244,7 @@ export const AdminReservationsPage = () => {
                   <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 lg:grid-cols-4 dark:bg-gray-900/60">
                     <TabsTrigger value="resumen">Resumen</TabsTrigger>
                     <TabsTrigger value="estados">Estados</TabsTrigger>
-                    <TabsTrigger value="operacion">Operación</TabsTrigger>
+                    {isSupervisor && <TabsTrigger value="operacion">Operación</TabsTrigger>}
                     <TabsTrigger value="historial">Historial</TabsTrigger>
                   </TabsList>
                 </div>
@@ -249,27 +256,29 @@ export const AdminReservationsPage = () => {
                         <CardContent className="p-4">
                           <div className="mb-3 flex items-center gap-3">
                             <DoorOpen className="text-[#6C5CE7]" size={18} />
-                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Reservas de salas</h2>
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Gestión de salas</h2>
                           </div>
-                          <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Gestión operativa de solicitudes, aprobaciones, cancelaciones y agenda de ocupación de salas.</p>
-                          <Button onClick={() => navigate("/reservations/rooms")} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-                            Ir a salas
+                          <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Gestión operativa de salas, consulta de disponibilidad y agenda de ocupación en tiempo real.</p>
+                          <Button onClick={() => navigate(isSupervisor ? "/rooms" : "/rooms-management")} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                            {isSupervisor ? "Ver salas" : "Gestionar catálogo"}
                           </Button>
                         </CardContent>
                       </Card>
 
-                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
-                        <CardContent className="p-4">
-                          <div className="mb-3 flex items-center gap-3">
-                            <BookMarked className="text-[#6C5CE7]" size={18} />
-                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Reservas de libros</h2>
-                          </div>
-                          <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Control de préstamos, devoluciones, rechazos, pérdidas y trazabilidad del flujo de libros.</p>
-                          <Button onClick={() => navigate("/reservations/books")} variant="outline" className="dark:border-gray-600 dark:text-gray-300">
-                            Ir a libros
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      {isAdmin && (
+                        <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                          <CardContent className="p-4">
+                            <div className="mb-3 flex items-center gap-3">
+                              <BookMarked className="text-[#6C5CE7]" size={18} />
+                              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Auditoría de biblioteca</h2>
+                            </div>
+                            <p className="mb-4 text-sm text-gray-600 dark:text-[#B7BDD6]">Consulta de préstamos activos y devoluciones registradas en el sistema.</p>
+                            <Button onClick={() => navigate("/active-loans")} variant="outline" className="dark:border-gray-600 dark:text-gray-300">
+                              Auditar préstamos
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -281,7 +290,7 @@ export const AdminReservationsPage = () => {
                             <Clock3 size={18} className="text-amber-500" />
                             <h3 className="font-semibold text-gray-900 dark:text-white">Solicitudes pendientes</h3>
                           </div>
-                          {renderReservationList(grouped.pending, "No hay solicitudes pendientes con el backend actual.")}
+                          {renderReservationList(grouped.pending, "No hay solicitudes pendientes.")}
                         </CardContent>
                       </Card>
                       <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
@@ -314,35 +323,34 @@ export const AdminReservationsPage = () => {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="operacion" className="mt-0 space-y-4">
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
-                        <CardContent className="p-4">
-                          <div className="mb-3 flex items-center gap-2">
-                            <RefreshCcw size={18} className="text-sky-500" />
-                            <h3 className="font-semibold text-gray-900 dark:text-white">Reprogramaciones</h3>
-                          </div>
-                          {renderReservationList(grouped.rescheduled, "Las reprogramaciones se gestionan actualmente como edición directa en reservas de sala o libro.")}
-                        </CardContent>
-                      </Card>
-                      <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
-                        <CardContent className="p-4">
-                          <div className="mb-3 flex items-center gap-2">
-                            <DoorOpen size={18} className="text-[#6C5CE7]" />
-                            <h3 className="font-semibold text-gray-900 dark:text-white">Accesos rápidos</h3>
-                          </div>
-                          <div className="flex flex-col gap-3">
-                            <Button onClick={() => navigate("/reservations/rooms")} className="justify-start bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-                              Administrar reservas de salas
-                            </Button>
-                            <Button onClick={() => navigate("/reservations/books")} variant="outline" className="justify-start dark:border-gray-600 dark:text-gray-300">
-                              Administrar reservas de libros
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
+                  {isSupervisor && (
+                    <TabsContent value="operacion" className="mt-0 space-y-4">
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                          <CardContent className="p-4">
+                            <div className="mb-3 flex items-center gap-2">
+                              <RefreshCcw size={18} className="text-sky-500" />
+                              <h3 className="font-semibold text-gray-900 dark:text-white">Reprogramaciones</h3>
+                            </div>
+                            {renderReservationList(grouped.rescheduled, "No hay reprogramaciones pendientes.")}
+                          </CardContent>
+                        </Card>
+                        <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">
+                          <CardContent className="p-4">
+                            <div className="mb-3 flex items-center gap-2">
+                              <DoorOpen size={18} className="text-[#6C5CE7]" />
+                              <h3 className="font-semibold text-gray-900 dark:text-white">Accesos rápidos</h3>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                              <Button onClick={() => navigate("/rooms")} className="justify-start bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                                Consultar disponibilidad de salas
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </TabsContent>
+                  )}
 
                   <TabsContent value="historial" className="mt-0">
                     <Card className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/40">

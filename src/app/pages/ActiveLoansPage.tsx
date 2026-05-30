@@ -12,6 +12,7 @@ import { Label } from "../components/ui/label";
 import { BookMarked, History, Plus, RotateCcw, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface UserRecord {
   id: number;
@@ -48,8 +49,6 @@ const formatDate = (value?: string | null) => {
   if (!value) return "Sin fecha";
   return new Date(value).toLocaleDateString("es-ES");
 };
-
-const formatRole = (role: UserRecord["rol"]) => role.charAt(0).toUpperCase() + role.slice(1);
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
@@ -96,12 +95,14 @@ const LoanTable = ({
   onRenew,
   onReturn,
   actionMode,
+  user,
 }: {
   loans: LoanRecord[];
   emptyMessage: string;
   onRenew: (loan: LoanRecord) => void;
   onReturn: (loan: LoanRecord) => void;
   actionMode: "active" | "renew" | "return" | "history";
+  user: any;
 }) => (
   <div className="min-h-0 overflow-auto">
     <table className="w-full min-w-[1040px] table-fixed text-sm">
@@ -153,19 +154,23 @@ const LoanTable = ({
               </td>
               <td className="px-4 py-3 align-middle lg:py-2">
                 <div className="flex justify-end gap-1">
-                  {actionMode === "renew" ? (
+                  {onRenew && actionMode === "renew" && user?.rol === "bibliotecario" ? (
                     <Button size="sm" variant="ghost" onClick={() => onRenew(loan)} title="Renovar préstamo">
                       <RotateCcw size={16} />
                     </Button>
                   ) : null}
-                  {actionMode === "return" || actionMode === "active" ? (
+                  {onReturn && (actionMode === "return" || actionMode === "active") && user?.rol === "bibliotecario" ? (
                     <Button size="sm" variant="ghost" onClick={() => onReturn(loan)} title="Registrar devolución">
                       <Undo2 size={16} />
                     </Button>
                   ) : null}
                   {actionMode === "history" ? (
                     <span className="text-xs text-gray-400 dark:text-gray-500">Historial</span>
-                  ) : null}
+                  ) : (
+                    user?.rol !== "bibliotecario" && (
+                      <span className="text-xs text-amber-600 font-medium">Auditando</span>
+                    )
+                  )}
                 </div>
               </td>
             </tr>
@@ -177,6 +182,7 @@ const LoanTable = ({
 );
 
 export const ActiveLoansPage = () => {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,10 +208,12 @@ export const ActiveLoansPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      const isAdmin = user?.rol === "administrativo";
+      
       const [loansData, booksData, usersData] = await Promise.all([
         api.getLoans(),
         api.getBooks(),
-        api.getUsers(),
+        isAdmin ? api.getUsers().catch(() => []) : Promise.resolve([]),
       ]);
       setLoans(loansData);
       setBooks(booksData);
@@ -218,11 +226,11 @@ export const ActiveLoansPage = () => {
   };
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    if (user) void loadData();
+  }, [user]);
 
   const activeStudents = useMemo(
-    () => users.filter((user) => user.rol === "estudiante" && user.estado === "activo"),
+    () => users.filter((u) => u.rol === "estudiante" && u.estado === "activo"),
     [users],
   );
 
@@ -257,11 +265,6 @@ export const ActiveLoansPage = () => {
 
   const overdueLoans = useMemo(
     () => filteredLoans.filter((loan) => getLoanViewStatus(loan) === "overdue"),
-    [filteredLoans],
-  );
-
-  const returnedLoans = useMemo(
-    () => filteredLoans.filter((loan) => getLoanViewStatus(loan) === "returned"),
     [filteredLoans],
   );
 
@@ -359,7 +362,7 @@ export const ActiveLoansPage = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-background transition-colors dark:bg-[#202445]">
+    <div className="h-screen overflow-hidden bg-background transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
 
@@ -397,9 +400,11 @@ export const ActiveLoansPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-            <Plus size={16} className="mr-2" />Registrar préstamo
-          </Button>
+          {user?.rol === "bibliotecario" && (
+            <Button onClick={() => setShowCreateDialog(true)} className="h-10 shrink-0 bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+              <Plus size={16} className="mr-2" />Registrar préstamo
+            </Button>
+          )}
         </div>
 
         <Card className="mt-2 flex min-h-0 flex-1 gap-0 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -428,6 +433,7 @@ export const ActiveLoansPage = () => {
                       onRenew={openRenewDialog}
                       onReturn={openReturnDialog}
                       actionMode="active"
+                      user={user}
                     />
                   </TabsContent>
 
@@ -438,6 +444,7 @@ export const ActiveLoansPage = () => {
                       onRenew={openRenewDialog}
                       onReturn={openReturnDialog}
                       actionMode="renew"
+                      user={user}
                     />
                   </TabsContent>
 
@@ -448,6 +455,7 @@ export const ActiveLoansPage = () => {
                       onRenew={openRenewDialog}
                       onReturn={openReturnDialog}
                       actionMode="return"
+                      user={user}
                     />
                   </TabsContent>
 
@@ -458,6 +466,7 @@ export const ActiveLoansPage = () => {
                       onRenew={openRenewDialog}
                       onReturn={openReturnDialog}
                       actionMode="return"
+                      user={user}
                     />
                   </TabsContent>
 
@@ -468,6 +477,7 @@ export const ActiveLoansPage = () => {
                       onRenew={openRenewDialog}
                       onReturn={openReturnDialog}
                       actionMode="history"
+                      user={user}
                     />
                   </TabsContent>
                 </div>
@@ -509,9 +519,9 @@ export const ActiveLoansPage = () => {
                   </SelectTrigger>
                   <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
                     <SelectItem value="NONE" className="dark:text-white dark:focus:bg-gray-700">Seleccionar</SelectItem>
-                    {activeStudents.map((student) => (
-                      <SelectItem key={student.id} value={String(student.id)} className="dark:text-white dark:focus:bg-gray-700">
-                        {student.nombreCompleto} · {student.correoInstitucional}
+                    {activeStudents.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)} className="dark:text-white dark:focus:bg-gray-700">
+                        {u.nombreCompleto} · {u.correoInstitucional}
                       </SelectItem>
                     ))}
                   </SelectContent>

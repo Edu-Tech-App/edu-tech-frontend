@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from "react-router";
 import { FaGraduationCap } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import { BookOpen, LayoutDashboard, GraduationCap, Calendar, DollarSign, Users, LogOut, BarChart3, BookMarked, Library, DoorOpen, CalendarCheck, FileText, Settings, X } from "lucide-react";
-import { isManagementRole } from "../lib/roles";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,23 +16,30 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const getMenuItemsByRole = () => {
     switch (user?.rol) {
       case 'estudiante':
+        return [
+          { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
+          { icon: GraduationCap, label: 'Materias', path: '/subjects' },
+          { icon: BookOpen, label: 'Biblioteca', path: '/library' },
+          { icon: DoorOpen, label: 'Salas', path: '/rooms' },
+          { icon: CalendarCheck, label: 'Mis Reservas', path: '/my-room-reservations' },
+          { icon: BookMarked, label: 'Mis Préstamos', path: '/my-loans' },
+          { icon: DollarSign, label: 'Mis Multas', path: '/my-fines' },
+        ];
       case 'docente':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
-          { icon: BookOpen, label: 'Biblioteca', path: '/library' },
-          { icon: Calendar, label: 'Mis Préstamos', path: '/my-loans' },
-          { icon: DoorOpen, label: 'Salas de Estudio', path: '/rooms' },
-          { icon: CalendarCheck, label: 'Mis Reservas', path: '/my-room-reservations' },
           { icon: GraduationCap, label: 'Materias', path: '/subjects' },
-          { icon: DollarSign, label: 'Mis Multas', path: '/my-fines' },
+          { icon: BookOpen, label: 'Biblioteca', path: '/library' },
+          { icon: DoorOpen, label: 'Salas', path: '/rooms' },
+          { icon: CalendarCheck, label: 'Mis Reservas', path: '/my-room-reservations' },
         ];
       case 'bibliotecario':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
-          { icon: Library, label: 'Libros', path: '/book-management' },
-          { icon: BookMarked, label: 'Préstamos Activos', path: '/active-loans' },
-          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
-          { icon: Users, label: 'Usuarios', path: '/users' },
+          { icon: Library, label: 'Gestión Biblioteca', path: '/book-management' },
+          { icon: BookMarked, label: 'Préstamos', path: '/active-loans' },
+          { icon: DollarSign, label: 'Multas', path: '/fines' },
+          { icon: FileText, label: 'Reportes', path: '/reports' },
         ];
       case 'administrativo':
         return [
@@ -41,38 +47,21 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
           { icon: Users, label: 'Usuarios', path: '/users' },
           { icon: GraduationCap, label: 'Materias', path: '/subjects' },
-          { icon: Library, label: 'Biblioteca', path: '/book-management' },
-          { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
-          { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
-          { icon: BookMarked, label: 'Préstamos', path: '/active-loans' },
-          { icon: DollarSign, label: 'Multas', path: '/fines' },
+          { icon: Library, label: 'Catálogo Libros', path: '/book-management' },
+          { icon: DoorOpen, label: 'Catálogo Salas', path: '/rooms-management' },
+          { icon: BookMarked, label: 'Auditoría Préstamos', path: '/active-loans' },
+          { icon: DollarSign, label: 'Auditoría Multas', path: '/fines' },
           { icon: FileText, label: 'Reportes', path: '/reports' },
-          { icon: Settings, label: 'Configuración', path: '/settings' },
         ];
       case 'supervisor':
         return [
           { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
-          { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
-          { icon: Library, label: 'Libros', path: '/book-management' },
-          { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
+          { icon: BarChart3, label: 'Ocupación', path: '/statistics' },
+          { icon: DoorOpen, label: 'Salas', path: '/rooms' },
           { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
-          { icon: Users, label: 'Usuarios', path: '/users' },
-          { icon: GraduationCap, label: 'Materias', path: '/subjects' },
-          { icon: DollarSign, label: 'Multas', path: '/fines' },
+          { icon: FileText, label: 'Reportes', path: '/reports' },
         ];
       default:
-        if (isManagementRole(user?.rol)) {
-          return [
-            { icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' },
-            { icon: BarChart3, label: 'Estadísticas', path: '/statistics' },
-            { icon: Library, label: 'Libros', path: '/book-management' },
-            { icon: DoorOpen, label: 'Salas', path: '/rooms-management' },
-            { icon: CalendarCheck, label: 'Reservas', path: '/reservations' },
-            { icon: Users, label: 'Usuarios', path: '/users' },
-            { icon: GraduationCap, label: 'Materias', path: '/subjects' },
-            { icon: DollarSign, label: 'Multas', path: '/fines' },
-          ];
-        }
         return [{ icon: LayoutDashboard, label: 'Inicio', path: '/dashboard' }];
     }
   };

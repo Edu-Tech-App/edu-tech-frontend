@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { PageLayout } from "../components/PageLayout";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -29,6 +30,7 @@ const formatCategory = (categoria: string | null) => {
 
 export const LibraryCatalogPage = () => {
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState("all");
   const [books, setBooks] = useState<LibraryBook[]>([]);
@@ -61,9 +63,9 @@ export const LibraryCatalogPage = () => {
   });
 
   const getStatusClasses = (estado: string) => {
-    if (estado === "DISPONIBLE") return "bg-green-100 text-green-700";
-    if (estado === "MANTENIMIENTO") return "bg-yellow-100 text-yellow-700";
-    return "bg-red-100 text-red-700";
+    if (estado === "DISPONIBLE") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
+    if (estado === "MANTENIMIENTO") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+    return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300";
   };
 
   const formatStatus = (estado: string) => {
@@ -74,54 +76,79 @@ export const LibraryCatalogPage = () => {
   };
 
   return (
-    <PageLayout>
-      <div className="p-6">
-        <Card className="border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800/40">
-          <CardHeader><CardTitle className="section-title">Catálogo de Biblioteca</CardTitle></CardHeader>
-          <div>
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <Input placeholder="Buscar por título o autor..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 dark:bg-gray-700 dark:border-gray-700 dark:text-white dark:placeholder-gray-400" />
-              </div>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-64 dark:bg-gray-700 dark:border-gray-700 dark:text-white"><SelectValue placeholder="Categoría" /></SelectTrigger>
-                <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                  <SelectItem value="all">Todas las Categorías</SelectItem>
-                  {categories.map((item) => <SelectItem key={item} value={item}>{formatCategory(item)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow className="dark:border-gray-700">
-                  <TableHead className="dark:text-[#F5F7FF]">Título</TableHead><TableHead className="dark:text-[#F5F7FF]">Autor</TableHead><TableHead className="dark:text-[#F5F7FF]">Categoría</TableHead>
-                  <TableHead className="dark:text-[#F5F7FF]">Editorial</TableHead><TableHead className="dark:text-[#F5F7FF]">Estado</TableHead><TableHead className="dark:text-[#F5F7FF]">Copias</TableHead><TableHead className="dark:text-[#F5F7FF]">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow className="dark:border-gray-700"><TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando libros...</TableCell></TableRow>
-                ) : filteredBooks.length === 0 ? (
-                  <TableRow className="dark:border-gray-700"><TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">No se encontraron libros con los filtros actuales.</TableCell></TableRow>
-                ) : (
-                  filteredBooks.map((book) => (
-                    <TableRow key={book.id} className="dark:border-gray-700 dark:hover:bg-gray-700/50">
-                      <TableCell className="font-medium dark:text-[#F5F7FF]">{book.titulo}</TableCell>
-                      <TableCell className="dark:text-[#B7BDD6]">{book.autor}</TableCell>
-                      <TableCell className="dark:text-[#B7BDD6]">{formatCategory(book.categoria)}</TableCell>
-                      <TableCell className="dark:text-[#B7BDD6]">{book.editorial || "Sin editorial"}</TableCell>
-                      <TableCell><span className={`px-2 py-1 rounded-full text-xs ${getStatusClasses(book.estado)}`}>{formatStatus(book.estado)}</span></TableCell>
-                      <TableCell className="dark:text-[#B7BDD6]">{book.cantidadDisponible}</TableCell>
-                      <TableCell><Button size="sm" variant="ghost" onClick={() => navigate(`/library/book/${book.id}`)}><Eye size={16} className="mr-2" />Ver</Button></TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+    <div className="h-screen overflow-hidden bg-background transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-y-auto p-4">
+        <div className="page-header">
+          <h1 className="page-title">Catálogo de Biblioteca</h1>
+          <p className="page-subtitle">Consulta el inventario completo de libros y recursos disponibles.</p>
+        </div>
+
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-800">
+            <Search className="shrink-0 text-gray-400" size={18} />
+            <Input 
+              placeholder="Buscar por título o autor..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent dark:text-white dark:placeholder-gray-400" 
+            />
           </div>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="h-10 w-full lg:w-64 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+              <SelectItem value="all">Todas las Categorías</SelectItem>
+              {categories.map((item) => <SelectItem key={item} value={item}>{formatCategory(item)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Card className="flex-1 overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <CardContent className="h-full p-0">
+            <div className="h-full overflow-auto">
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="border-b border-gray-100 bg-[#EEF2FF] dark:border-gray-700 dark:bg-[#2F355F]">
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Título</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Autor</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Categoría</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Editorial</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Estado</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Copias</TableHead>
+                    <TableHead className="h-11 text-right font-semibold text-gray-700 dark:text-[#E6EBFF]">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="[&_tr:last-child]:border-0">
+                  {loading ? (
+                    <TableRow><TableCell colSpan={7} className="py-12 text-center text-gray-500">Cargando libros...</TableCell></TableRow>
+                  ) : filteredBooks.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="py-12 text-center text-gray-500">No se encontraron libros.</TableCell></TableRow>
+                  ) : (
+                    filteredBooks.map((book) => (
+                      <TableRow key={book.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                        <TableCell className="font-medium text-gray-700 dark:text-white">{book.titulo}</TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{book.autor}</TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{formatCategory(book.categoria)}</TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{book.editorial || "Sin editorial"}</TableCell>
+                        <TableCell><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClasses(book.estado)}`}>{formatStatus(book.estado)}</span></TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{book.cantidadDisponible}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="ghost" onClick={() => navigate(`/library/book/${book.id}`)} className="text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
+                            <Eye size={16} className="mr-2" />Ver
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
         </Card>
-      </div>
-    </PageLayout>
+      </main>
+    </div>
   );
 };

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { PageLayout } from "../components/PageLayout";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { DollarSign, AlertCircle, CheckCircle, BookOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -25,6 +27,7 @@ interface Fine {
 
 export const MyFinesPage = () => {
   const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -74,61 +77,66 @@ export const MyFinesPage = () => {
 
   const getStatusBadge = (estado: string) => {
     switch (estado) {
-      case "PENDIENTE": return <Badge className="bg-red-500">Pendiente</Badge>;
-      case "PAGADA": return <Badge className="bg-green-500">Pagada</Badge>;
-      case "ANULADA": return <Badge className="bg-gray-500">Anulada</Badge>;
+      case "PENDIENTE": return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Pendiente</Badge>;
+      case "PAGADA": return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Pagada</Badge>;
+      case "ANULADA": return <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">Anulada</Badge>;
       default: return <Badge>{estado}</Badge>;
     }
   };
 
+  const cardClass = "border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800";
+  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3";
+
   return (
-    <PageLayout>
-      <div className="page-shell">
+    <div className="h-screen overflow-hidden bg-background transition-colors">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+      <main className="lg:ml-64 mt-16 box-border flex h-[calc(100vh-4rem)] flex-col overflow-y-auto p-4">
         <div className="page-header">
           <h1 className="page-title">Mis Multas</h1>
-          <p className="page-subtitle">Gestiona tus multas por devoluciones tardías</p>
+          <p className="page-subtitle">Gestiona tus multas por devoluciones tardías y regulariza tu estado.</p>
         </div>
 
         {!loading && pendingFines.length > 0 && (
-          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
-            <AlertCircle size={24} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 flex items-start gap-4 rounded-xl border border-rose-200 bg-rose-50/50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20 backdrop-blur-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-900/50">
+              <AlertCircle size={22} />
+            </div>
             <div>
-              <p className="font-semibold text-red-800 dark:text-red-200">Tienes multas pendientes de pago</p>
-              <p className="mt-1 text-sm text-red-700 dark:text-red-100/85">No podrás realizar nuevos préstamos hasta que pagues tus multas pendientes.</p>
+              <p className="font-bold text-rose-800 dark:text-rose-200">Tienes multas pendientes</p>
+              <p className="mt-1 text-sm text-rose-700/80 dark:text-rose-300/80">
+                Debes estar al día con tus pagos para poder realizar nuevos préstamos de libros.
+              </p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Total Pendiente</p><p className="text-3xl font-bold text-red-600">{loading ? "..." : `$${totalPending}`}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">{pendingFines.length} multa{pendingFines.length !== 1 ? "s" : ""}</p></div><DollarSign size={40} className="text-red-600" /></div></CardContent></Card>
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Total Pagado</p><p className="text-3xl font-bold text-green-600">{loading ? "..." : `$${totalPaid}`}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">{paidFines.length} multa{paidFines.length !== 1 ? "s" : ""}</p></div><CheckCircle size={40} className="text-green-600" /></div></CardContent></Card>
-          <Card className="dark:border-gray-700 dark:bg-gray-800"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600 dark:text-[#B7BDD6]">Total Multas</p><p className="text-3xl font-bold text-[#6C5CE7]">{loading ? "..." : fines.length}</p><p className="mt-1 text-xs text-gray-500 dark:text-[#8E95B5]">Historial completo</p></div><BookOpen size={40} className="text-[#6C5CE7]" /></div></CardContent></Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <Card className={cardClass}><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="metric-label">Total Pendiente</p><p className="mt-2 text-3xl font-bold text-rose-600">{loading ? "..." : `$${totalPending}`}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-rose-100 text-rose-600"><DollarSign size={24} /></div></div></CardContent></Card>
+          <Card className={cardClass}><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="metric-label">Total Pagado</p><p className="mt-2 text-3xl font-bold text-emerald-600">{loading ? "..." : `$${totalPaid}`}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600"><CheckCircle size={24} /></div></div></CardContent></Card>
+          <Card className={cardClass}><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="metric-label">Multas Totales</p><p className="mt-2 text-3xl font-bold text-gray-800 dark:text-[#F5F7FF]">{loading ? "..." : fines.length}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#6C5CE7]/14 text-[#6C5CE7]"><BookOpen size={24} /></div></div></CardContent></Card>
         </div>
 
-        {!loading && pendingFines.length > 0 && (
-          <Card className="mb-6 dark:border-gray-700 dark:bg-gray-800">
-            <CardHeader><CardTitle className="section-title">Multas Pendientes de Pago</CardTitle></CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+        {pendingFines.length > 0 && (
+          <Card className={`${cardClass} mb-6 overflow-hidden`}>
+            <CardHeader><CardTitle className="section-title px-1">Multas por pagar</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <div className="space-y-0 divide-y dark:divide-gray-700">
                 {pendingFines.map((fine) => (
-                  <div key={fine.id} className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
-                    <div className="flex items-start justify-between">
+                  <div key={fine.id} className="p-5 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-700/30">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div className="flex-1">
-                        <h3 className="mb-1 text-lg font-semibold text-gray-900 dark:text-[#F5F7FF]">{fine.prestamo?.libro?.titulo}</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
-                          <div><p className="text-gray-600 dark:text-[#B7BDD6]">Fecha Préstamo</p><p className="font-medium text-gray-900 dark:text-[#F5F7FF]">{new Date(fine.prestamo?.fechaPrestamo).toLocaleDateString("es-ES")}</p></div>
-                          <div><p className="text-gray-600 dark:text-[#B7BDD6]">Fecha Vencimiento</p><p className="font-medium text-gray-900 dark:text-[#F5F7FF]">{new Date(fine.prestamo?.fechaLimiteDevolucion).toLocaleDateString("es-ES")}</p></div>
-                          <div><p className="text-gray-600 dark:text-[#B7BDD6]">Fecha Devolución</p><p className="font-medium text-gray-900 dark:text-[#F5F7FF]">{fine.prestamo?.fechaDevolucionReal ? new Date(fine.prestamo.fechaDevolucionReal).toLocaleDateString("es-ES") : "-"}</p></div>
-                          <div><p className="text-gray-600 dark:text-[#B7BDD6]">Días de Retraso</p><p className="font-medium text-red-600 dark:text-red-300">{fine.diasRetraso} día{fine.diasRetraso !== 1 ? "s" : ""}</p></div>
-                        </div>
-                        <div className="mt-3 flex items-center gap-2">
-                          <AlertCircle size={16} className="text-red-600" />
-                          <p className="text-sm text-red-700 dark:text-red-100/85">Multa: $1 por día de retraso</p>
+                        <h3 className="font-bold text-lg text-gray-800 dark:text-white leading-tight">{fine.prestamo?.libro?.titulo}</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2 mt-4 text-xs font-medium uppercase tracking-wider text-gray-400">
+                          <div><p>Prestado</p><p className="text-gray-600 dark:text-[#B7BDD6]">{new Date(fine.prestamo?.fechaPrestamo).toLocaleDateString("es-ES")}</p></div>
+                          <div><p>Vencimiento</p><p className="text-gray-600 dark:text-[#B7BDD6]">{new Date(fine.prestamo?.fechaLimiteDevolucion).toLocaleDateString("es-ES")}</p></div>
+                          <div><p>Devolución</p><p className="text-gray-600 dark:text-[#B7BDD6]">{fine.prestamo?.fechaDevolucionReal ? new Date(fine.prestamo.fechaDevolucionReal).toLocaleDateString("es-ES") : "-"}</p></div>
+                          <div><p>Retraso</p><p className="text-rose-600 font-bold">{fine.diasRetraso} día{fine.diasRetraso !== 1 ? "s" : ""}</p></div>
                         </div>
                       </div>
-                      <div className="ml-4 text-right">
-                        <p className="text-2xl font-bold text-red-600 mb-2">${fine.monto}</p>
-                        <Button onClick={() => handlePayClick(fine)} className="bg-green-600 hover:bg-green-700">Pagar Multa</Button>
+                      <div className="flex items-center gap-4">
+                        <p className="text-2xl font-black text-rose-600">${fine.monto}</p>
+                        <Button onClick={() => handlePayClick(fine)} className="bg-emerald-600 hover:bg-emerald-700 h-10 px-6 font-bold shadow-lg shadow-emerald-600/20">Pagar ahora</Button>
                       </div>
                     </div>
                   </div>
@@ -138,80 +146,72 @@ export const MyFinesPage = () => {
           </Card>
         )}
 
-        <Card className="border-gray-100 bg-white/70 px-6 pb-8 dark:border-gray-700 dark:bg-gray-800/40">
-          <CardHeader><CardTitle className="section-title">Historial de Multas</CardTitle></CardHeader>
-          <div>
-            {loading ? (
-              <p className="py-8 text-center text-gray-500 dark:text-[#8E95B5]">Cargando multas...</p>
-            ) : fines.length === 0 ? (
-              <div className="text-center py-12">
-                <CheckCircle size={48} className="mx-auto mb-3 text-gray-400 dark:text-[#8E95B5]" />
-                <p className="text-gray-600 dark:text-[#B7BDD6]">No tienes multas registradas</p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-[#8E95B5]">¡Sigue devolviendo tus libros a tiempo!</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b dark:border-gray-700">
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Libro</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Préstamo</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Vencimiento</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Devolución</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Días Tarde</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Monto</th>
-                      <th className="p-3 text-left text-gray-700 dark:text-[#F5F7FF]">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fines.map((fine) => (
-                      <tr key={fine.id} className="border-b hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
-                        <td className="p-3 font-medium text-gray-900 dark:text-[#F5F7FF]">{fine.prestamo?.libro?.titulo}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{new Date(fine.prestamo?.fechaPrestamo).toLocaleDateString("es-ES")}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{new Date(fine.prestamo?.fechaLimiteDevolucion).toLocaleDateString("es-ES")}</td>
-                        <td className="p-3 text-gray-600 dark:text-[#B7BDD6]">{fine.prestamo?.fechaDevolucionReal ? new Date(fine.prestamo.fechaDevolucionReal).toLocaleDateString("es-ES") : "-"}</td>
-                        <td className="p-3 font-medium text-red-600 dark:text-red-300">{fine.diasRetraso}</td>
-                        <td className="p-3 font-bold text-gray-900 dark:text-[#F5F7FF]">${fine.monto}</td>
-                        <td className="p-3">{getStatusBadge(fine.estado)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+        <Card className={`${cardClass} flex-1 overflow-hidden`}>
+          <CardHeader><CardTitle className="section-title px-1">Historial completo</CardTitle></CardHeader>
+          <CardContent className="h-full p-0">
+            <div className="h-full overflow-auto">
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="border-b border-gray-100 bg-[#EEF2FF] dark:border-gray-700 dark:bg-[#2F355F]">
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Libro</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Vencimiento</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Días Tarde</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Monto</TableHead>
+                    <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="[&_tr:last-child]:border-0">
+                  {loading ? (
+                    <TableRow><TableCell colSpan={5} className="py-12 text-center text-gray-500">Cargando multas...</TableCell></TableRow>
+                  ) : fines.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="py-12 text-center text-gray-500">No hay registros de multas.</TableCell></TableRow>
+                  ) : (
+                    fines.map((fine) => (
+                      <TableRow key={fine.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                        <TableCell className="font-medium text-gray-700 dark:text-white">{fine.prestamo?.libro?.titulo}</TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{new Date(fine.prestamo?.fechaLimiteDevolucion).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="text-rose-600 font-medium">{fine.diasRetraso}</TableCell>
+                        <TableCell className="font-bold text-gray-800 dark:text-[#F5F7FF]">${fine.monto}</TableCell>
+                        <TableCell>{getStatusBadge(fine.estado)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
         </Card>
 
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-          <DialogContent>
+          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle className="dark:text-[#F5F7FF]">Confirmar Pago de Multa</DialogTitle>
+              <DialogTitle className="dark:text-[#F5F7FF]">Confirmar Pago</DialogTitle>
               <DialogDescription className="dark:text-[#B7BDD6]">Estás a punto de pagar la multa por "{selectedFine?.prestamo?.libro?.titulo}"</DialogDescription>
             </DialogHeader>
             {selectedFine && (
               <div className="py-4">
-                <div className="rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-4 dark:border-gray-700 dark:bg-gray-700/50">
-                  <p className="mb-2 text-sm font-medium text-[#5b4bd1] dark:text-[#C9C3E8]">Detalles de la multa:</p>
-                  <div className="space-y-1 text-sm text-[#6C5CE7] dark:text-[#B7BDD6]">
-                    <p><strong>Libro:</strong> {selectedFine.prestamo?.libro?.titulo}</p>
-                    <p><strong>Días de retraso:</strong> {selectedFine.diasRetraso} día{selectedFine.diasRetraso !== 1 ? "s" : ""}</p>
-                    <p><strong>Monto a pagar:</strong> ${selectedFine.monto}</p>
+                <div className={`${sectionBg} border border-gray-200 dark:border-gray-600`}>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5b4bd1] dark:text-[#C9C3E8]">Resumen de deuda</p>
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-[#F5F7FF]">
+                    <div className="flex justify-between"><span>Días de retraso:</span><span className="font-bold">{selectedFine.diasRetraso}</span></div>
+                    <div className="flex justify-between text-lg mt-2 border-t pt-2 border-gray-200 dark:border-gray-600"><span className="font-bold">Total a pagar:</span><span className="font-black text-[#6C5CE7]">${selectedFine.monto}</span></div>
                   </div>
                 </div>
-                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900/40 dark:bg-green-950/20">
-                  <p className="text-xs text-green-800 dark:text-green-100/85">Una vez pagada esta multa, podrás volver a realizar préstamos de libros.</p>
+                <div className="mt-4 flex items-start gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle size={14} className="shrink-0 mt-0.5" />
+                  <p>Al pagar quedarás habilitado inmediatamente para solicitar nuevos libros en la biblioteca.</p>
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Cancelar</Button>
-              <Button onClick={handleConfirmPayment} disabled={paying} className="bg-green-600 hover:bg-green-700">
+              <Button variant="outline" onClick={() => setShowPaymentDialog(false)} className="dark:border-gray-600">Cancelar</Button>
+              <Button onClick={handleConfirmPayment} disabled={paying} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                 {paying ? "Procesando..." : "Confirmar Pago"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </PageLayout>
+      </main>
+    </div>
   );
 };

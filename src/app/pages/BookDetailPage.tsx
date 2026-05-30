@@ -47,6 +47,7 @@ export const BookDetailPage = () => {
   const [showBorrowDialog, setShowBorrowDialog] = useState(false);
   const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submittingLoan, setSubmittingLoan] = useState(false);
 
   useEffect(() => {
     const loadBook = async () => {
@@ -74,10 +75,40 @@ export const BookDetailPage = () => {
     setShowBorrowDialog(true);
   };
 
-  const confirmBorrow = () => {
-    setShowBorrowDialog(false);
-    toast.success("El módulo de préstamos se conectará en el siguiente paso.");
-    setTimeout(() => navigate('/library'), 1500);
+  const dueDate = (() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().split("T")[0];
+  })();
+
+  const confirmBorrow = async () => {
+    if (!book || !user?.id) return;
+
+    try {
+      setSubmittingLoan(true);
+      await api.createLoan({
+        libroId: book.id,
+        estudianteId: user.id,
+        fechaLimiteDevolucion: dueDate,
+      });
+
+      setBook((current) =>
+        current
+          ? {
+              ...current,
+              cantidadDisponible: Math.max(0, current.cantidadDisponible - 1),
+            }
+          : current,
+      );
+
+      setShowBorrowDialog(false);
+      toast.success("Préstamo solicitado correctamente");
+      navigate("/my-loans");
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo solicitar el préstamo");
+    } finally {
+      setSubmittingLoan(false);
+    }
   };
 
   const formatStatus = (estado: string) => {
@@ -193,7 +224,9 @@ export const BookDetailPage = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>Cancelar</Button>
-              <Button onClick={confirmBorrow} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Confirmar</Button>
+              <Button onClick={confirmBorrow} disabled={submittingLoan} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                {submittingLoan ? "Procesando..." : "Confirmar"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

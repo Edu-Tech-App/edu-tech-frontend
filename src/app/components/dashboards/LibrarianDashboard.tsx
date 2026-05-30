@@ -1,35 +1,60 @@
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { BookMarked, BookX, DollarSign } from "lucide-react";
+import { Badge } from "../ui/badge";
+import { BookMarked, Clock, DollarSign, Library } from "lucide-react";
 
-export const LibrarianDashboard = () => {
+interface LibrarianDashboardProps {
+  data: {
+    activeLoansCount: number;
+    overdueLoansCount: number;
+    pendingFines: number;
+    recentLoans: any[];
+    availableBooks: number;
+  };
+}
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "Sin fecha";
+  return new Date(value).toLocaleDateString("es-ES");
+};
+
+export const LibrarianDashboard = ({ data }: LibrarianDashboardProps) => {
   const navigate = useNavigate();
 
-  const stats = [
-    { title: 'Active Loans', value: '156', icon: BookMarked, color: 'bg-[#6C5CE7]/14 text-[#6C5CE7]' },
-    { title: 'Overdue Books', value: '23', icon: BookX, color: 'bg-red-100 text-red-600' },
-    { title: 'Total Fines', value: '$450', icon: DollarSign, color: 'bg-yellow-100 text-yellow-600' }
-  ];
+  const cardClass = "border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800";
+  const titleClass = "metric-label";
+  const valueClass = "mt-2 text-3xl font-bold text-gray-800 dark:text-[#F5F7FF]";
+  const iconClass = "flex h-12 w-12 items-center justify-center rounded-lg bg-[#6C5CE7]/14 dark:bg-gray-700/50 text-[#6C5CE7] dark:text-[#F5F7FF]";
+  const sectionBg = "rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3";
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Librarian Dashboard</h1>
+    <div className="space-y-4">
+      <div className="page-header">
+        <h1 className="page-title">Panel de Biblioteca</h1>
+        <p className="page-subtitle">Gestión de recursos bibliográficos y préstamos</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { title: "Préstamos Activos", value: data.activeLoansCount, icon: BookMarked },
+          { title: "Préstamos Vencidos", value: data.overdueLoansCount, icon: Clock },
+          { title: "Multas Pendientes", value: formatCurrency(data.pendingFines), icon: DollarSign },
+          { title: "Libros Disponibles", value: data.availableBooks, icon: Library },
+        ].map((item) => {
+          const Icon = item.icon;
           return (
-            <Card key={stat.title}>
-              <CardContent className="p-6">
+            <Card key={item.title} className={cardClass}>
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">{stat.title}</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-2">{stat.value}</p>
+                    <p className={titleClass}>{item.title}</p>
+                    <p className={valueClass}>{item.value}</p>
                   </div>
-                  <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center`}>
-                    <Icon size={24} />
-                  </div>
+                  <div className={iconClass}><Icon size={24} /></div>
                 </div>
               </CardContent>
             </Card>
@@ -37,45 +62,41 @@ export const LibrarianDashboard = () => {
         })}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Button onClick={() => navigate('/library/loans')} variant="outline" className="justify-start">
-            Register Loan
-          </Button>
-          <Button onClick={() => navigate('/library/loans')} variant="outline" className="justify-start">
-            Register Return
-          </Button>
-          <Button onClick={() => navigate('/library')} variant="outline" className="justify-start">
-            Manage Books
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.5fr]">
+        <Card className={cardClass}>
+          <CardHeader>
+            <CardTitle className="section-title">Acciones Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3">
+            <Button onClick={() => navigate('/active-loans')} variant="outline" className="justify-start dark:border-gray-600 dark:text-gray-300">
+              Registrar Préstamo
+            </Button>
+            <Button onClick={() => navigate('/active-loans')} variant="outline" className="justify-start dark:border-gray-600 dark:text-gray-300">
+              Registrar Devolución
+            </Button>
+            <Button onClick={() => navigate('/book-management')} variant="outline" className="justify-start dark:border-gray-600 dark:text-gray-300">
+              Gestionar Libros
+            </Button>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[
-              { action: 'Loan registered', book: 'Introduction to Algorithms', user: 'John Doe', time: '10 min ago' },
-              { action: 'Book returned', book: 'Clean Code', user: 'Jane Smith', time: '25 min ago' },
-              { action: 'Fine paid', book: 'Design Patterns', user: 'Mike Johnson', time: '1 hour ago' }
-            ].map((activity, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-700">{activity.action}</p>
-                  <p className="text-sm text-gray-500">{activity.book} · {activity.user}</p>
+        <Card className={cardClass}>
+          <CardHeader><CardTitle className="section-title">Actividad reciente</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {data.recentLoans.length === 0
+              ? <p className="text-gray-500 dark:text-gray-400">No hay movimientos recientes.</p>
+              : data.recentLoans.map((loan: any) => (
+                <div key={loan.id} className={`flex items-center justify-between ${sectionBg}`}>
+                  <div>
+                    <p className="font-medium text-gray-700 dark:text-[#F5F7FF]">{loan.libro?.titulo || "Libro"}</p>
+                    <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{loan.estudiante?.user?.nombreCompleto || "Estudiante"} · {formatDate(loan.fechaPrestamo)}</p>
+                  </div>
+                  <Badge className="bg-[#6C5CE7]/80">{loan.estado}</Badge>
                 </div>
-                <span className="text-xs text-gray-400">{activity.time}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
