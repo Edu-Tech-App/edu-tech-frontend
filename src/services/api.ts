@@ -288,6 +288,57 @@ export const api = {
     }
   },
 
+  getSubjectTasks: async (subjectId: number) => {
+    try {
+      const response = await apiClient.get(`/subjects/${subjectId}/tasks`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener tareas"));
+    }
+  },
+
+  createSubjectTask: async (subjectId: number, data: {
+    titulo: string;
+    descripcion: string;
+    file?: File | null;
+  }) => {
+    try {
+      const formData = new FormData();
+      formData.append("titulo", data.titulo);
+      formData.append("descripcion", data.descripcion);
+      if (data.file) {
+        formData.append("file", data.file);
+      }
+      const response = await apiClient.post(`/subjects/${subjectId}/tasks`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al crear la tarea"));
+    }
+  },
+
+  submitSubjectTask: async (taskId: number, data: {
+    mensaje?: string;
+    file?: File | null;
+  }) => {
+    try {
+      const formData = new FormData();
+      if (data.mensaje) {
+        formData.append("mensaje", data.mensaje);
+      }
+      if (data.file) {
+        formData.append("file", data.file);
+      }
+      const response = await apiClient.post(`/subjects/tasks/${taskId}/submissions`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al subir la entrega"));
+    }
+  },
+
   getRoomReservations: async () => {
     try {
       const response = await apiClient.get("/study-rooms/reservations");

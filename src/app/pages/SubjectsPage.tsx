@@ -556,7 +556,7 @@ export const SubjectsPage = () => {
                                   </Button>
                                 )}
                                 {user?.rol !== "estudiante" && (
-                                  <Button size="sm" variant="ghost" onClick={() => void openDetailDialog(subject)} title="Ver detalle">
+                                  <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)} title="Ver detalle">
                                     <Eye size={16} />
                                   </Button>
                                 )}
