@@ -68,6 +68,7 @@ export const SubjectDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [savingStudentId, setSavingStudentId] = useState<number | null>(null);
   const [gradeDrafts, setGradeDrafts] = useState<Record<number, Record<GradeSlotKey, string>>>({});
+  const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
 
   const loadTeacherData = async (subjectId: number) => {
     const [gradesData, enrollmentsData] = await Promise.all([
@@ -120,11 +121,24 @@ export const SubjectDetailPage = () => {
         corte2: studentGrades.find((grade) => getSlotFromGrade(grade) === "corte2") ?? null,
         corte3: studentGrades.find((grade) => getSlotFromGrade(grade) === "corte3") ?? null,
       };
+      const studentDraft = gradeDrafts[enrollment.estudianteId] ?? {};
 
       const effectiveValues = {
-        corte1: gradeDrafts[enrollment.estudianteId]?.corte1 ?? (bySlot.corte1 ? String(Number(bySlot.corte1.valor)) : ""),
-        corte2: gradeDrafts[enrollment.estudianteId]?.corte2 ?? (bySlot.corte2 ? String(Number(bySlot.corte2.valor)) : ""),
-        corte3: gradeDrafts[enrollment.estudianteId]?.corte3 ?? (bySlot.corte3 ? String(Number(bySlot.corte3.valor)) : ""),
+        corte1: Object.prototype.hasOwnProperty.call(studentDraft, "corte1")
+          ? studentDraft.corte1 ?? ""
+          : bySlot.corte1
+            ? String(Number(bySlot.corte1.valor))
+            : "",
+        corte2: Object.prototype.hasOwnProperty.call(studentDraft, "corte2")
+          ? studentDraft.corte2 ?? ""
+          : bySlot.corte2
+            ? String(Number(bySlot.corte2.valor))
+            : "",
+        corte3: Object.prototype.hasOwnProperty.call(studentDraft, "corte3")
+          ? studentDraft.corte3 ?? ""
+          : bySlot.corte3
+            ? String(Number(bySlot.corte3.valor))
+            : "",
       };
 
       const finalGrade = GRADE_SLOTS.reduce((sum, slot) => {
@@ -159,15 +173,40 @@ export const SubjectDetailPage = () => {
   }, [grades]);
 
   const handleDraftChange = (studentId: number, key: GradeSlotKey, value: string) => {
+    if (value !== "") {
+      const numeric = Number(value);
+      if (Number.isNaN(numeric)) return;
+      if (numeric > 5) {
+        toast.error("La nota no puede ser mayor a 5.0");
+        return;
+      }
+      if (numeric < 0) {
+        toast.error("La nota no puede ser menor a 0.0");
+        return;
+      }
+    }
+
     setGradeDrafts((current) => ({
       ...current,
       [studentId]: {
-        corte1: current[studentId]?.corte1 ?? "",
-        corte2: current[studentId]?.corte2 ?? "",
-        corte3: current[studentId]?.corte3 ?? "",
+        ...(current[studentId] ?? {}),
         [key]: value,
       },
     }));
+  };
+
+  const handleResetStudentDraft = (studentId: number) => {
+    setGradeDrafts((current) => {
+      if (!current[studentId]) return current;
+      const next = { ...current };
+      delete next[studentId];
+      return next;
+    });
+    setEditingStudentId(null);
+  };
+
+  const handleStartEditingStudent = (studentId: number) => {
+    setEditingStudentId(studentId);
   };
 
   const handleSaveStudentGrades = async (studentId: number) => {
@@ -219,6 +258,7 @@ export const SubjectDetailPage = () => {
         delete next[studentId];
         return next;
       });
+      setEditingStudentId(null);
     } catch (error: any) {
       toast.error(error.message || "No se pudieron guardar las notas");
     } finally {
@@ -340,20 +380,43 @@ export const SubjectDetailPage = () => {
                                 step="0.1"
                                 value={student.effectiveValues[slot.key]}
                                 onChange={(e) => handleDraftChange(student.id, slot.key, e.target.value)}
-                                className="h-9 min-w-[88px] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                disabled={editingStudentId !== student.id || savingStudentId === student.id}
+                                className={
+                                  editingStudentId === student.id
+                                    ? "h-9 min-w-[88px] border-gray-300 bg-white text-gray-900 dark:border-gray-500 dark:bg-gray-700 dark:text-white"
+                                    : "h-9 min-w-[88px] border-gray-300 bg-gray-100 text-gray-500 disabled:cursor-not-allowed disabled:opacity-100 dark:border-gray-600 dark:bg-gray-700/70 dark:text-gray-300"
+                                }
                               />
                             </TableCell>
                           ))}
                           <TableCell className="font-bold text-[#6C5CE7]">{student.finalGrade.toFixed(2)}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() => void handleSaveStudentGrades(student.id)}
-                              disabled={savingStudentId === student.id}
-                              className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
-                            >
-                              {savingStudentId === student.id ? "Guardando..." : "Guardar"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  if (editingStudentId === student.id) {
+                                    handleResetStudentDraft(student.id);
+                                    return;
+                                  }
+                                  handleStartEditingStudent(student.id);
+                                }}
+                                disabled={savingStudentId === student.id}
+                                className="border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                              >
+                                {editingStudentId === student.id ? "Cancelar" : "✏️"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => void handleSaveStudentGrades(student.id)}
+                                disabled={savingStudentId === student.id || editingStudentId !== student.id}
+                                className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                              >
+                                {savingStudentId === student.id ? "Guardando..." : "Guardar"}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

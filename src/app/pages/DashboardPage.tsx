@@ -11,13 +11,14 @@ import { api } from "../../services/api";
 import { toast } from "sonner";
 import { LibrarianDashboard } from "../components/dashboards/LibrarianDashboard";
 import { TeacherDashboard } from "../components/dashboards/TeacherDashboard";
+import { formatDateTimeEs, parseLocalDate } from "../../services/dates";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
 const formatDateTime = (value?: string) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleString("es-ES", {
+  return formatDateTimeEs(value, {
     dateStyle: "short",
     timeStyle: "short",
   });
@@ -70,7 +71,7 @@ export const DashboardPage = () => {
               status: loan.estado,
             })),
           ]
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
             .slice(0, 6);
 
           setData({
@@ -101,7 +102,7 @@ export const DashboardPage = () => {
               date: reservation.fechaReserva,
               status: reservation.estado,
             }))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
             .slice(0, 6);
 
           setData({

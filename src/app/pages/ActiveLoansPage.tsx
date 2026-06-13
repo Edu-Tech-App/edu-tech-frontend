@@ -12,6 +12,7 @@ import { Label } from "../components/ui/label";
 import { BookMarked, History, Plus, RotateCcw, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { addDays, formatDateEs, parseLocalDate, toDateInputValue } from "../../services/dates";
 import { useAuth } from "../context/AuthContext";
 
 interface UserRecord {
@@ -45,20 +46,20 @@ interface LoanRecord {
 
 type LoanFilter = "all" | "active" | "overdue" | "returned";
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
-};
+const formatDate = (value?: string | null) => formatDateEs(value);
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
-const toDateInputValue = (value: Date) => value.toISOString().split("T")[0];
+const getFineSummary = (loan: LoanRecord) => {
+  if (!loan.multa?.monto) return null;
 
-const addDays = (date: Date, days: number) => {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
+  const status = loan.multa.estado?.toUpperCase();
+  const amount = formatCurrency(Number(loan.multa.monto));
+
+  if (status === "PAGADA") return `Multa pagada: ${amount}`;
+  if (status === "ANULADA") return `Multa anulada: ${amount}`;
+  return `Multa pendiente: ${amount}`;
 };
 
 const getLoanViewStatus = (loan: LoanRecord) => {
@@ -68,7 +69,7 @@ const getLoanViewStatus = (loan: LoanRecord) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const dueDate = new Date(loan.fechaLimiteDevolucion);
+  const dueDate = parseLocalDate(loan.fechaLimiteDevolucion);
   dueDate.setHours(0, 0, 0, 0);
 
   if (loan.estado === "VENCIDO" || dueDate < today) return "overdue";
@@ -148,8 +149,8 @@ const LoanTable = ({
               <td className="px-4 py-3 align-middle text-gray-700 dark:text-gray-400 lg:py-2">{formatDate(loan.fechaLimiteDevolucion)}</td>
               <td className="px-4 py-3 align-middle lg:py-2">
                 <Badge className={getStatusClass(loan)}>{getStatusLabel(loan)}</Badge>
-                {loan.multa?.monto ? (
-                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-300">Multa: {formatCurrency(Number(loan.multa.monto))}</p>
+                {getFineSummary(loan) ? (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-300">{getFineSummary(loan)}</p>
                 ) : null}
               </td>
               <td className="px-4 py-3 align-middle lg:py-2">
@@ -255,7 +256,7 @@ export const ActiveLoansPage = () => {
           (activeFilter === "returned" && status === "returned");
         return matchesSearch && matchesFilter;
       })
-      .sort((left, right) => new Date(right.fechaPrestamo).getTime() - new Date(left.fechaPrestamo).getTime());
+      .sort((left, right) => parseLocalDate(right.fechaPrestamo).getTime() - parseLocalDate(left.fechaPrestamo).getTime());
   }, [activeFilter, loans, searchTerm]);
 
   const activeLoans = useMemo(
@@ -287,7 +288,7 @@ export const ActiveLoansPage = () => {
 
   const openRenewDialog = (loan: LoanRecord) => {
     setSelectedLoan(loan);
-    setRenewDate(toDateInputValue(addDays(new Date(loan.fechaLimiteDevolucion), 7)));
+    setRenewDate(toDateInputValue(addDays(parseLocalDate(loan.fechaLimiteDevolucion), 7)));
     setShowRenewDialog(true);
   };
 
@@ -349,8 +350,18 @@ export const ActiveLoansPage = () => {
 
     setReturning(true);
     try {
+      const dueDate = parseLocalDate(selectedLoan.fechaLimiteDevolucion);
+      dueDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lateDays = Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 3600 * 24)));
+
       await api.returnLoan(selectedLoan.id);
-      toast.success("Devolución registrada exitosamente");
+      if (lateDays > 0) {
+        toast.success(`Devolución registrada. Se generó una multa por ${lateDays} día${lateDays !== 1 ? "s" : ""} de retraso.`);
+      } else {
+        toast.success("Devolución registrada exitosamente");
+      }
       setShowReturnDialog(false);
       setSelectedLoan(null);
       await loadData();
@@ -593,7 +604,7 @@ export const ActiveLoansPage = () => {
               </div>
               {selectedLoan?.multa?.monto ? (
                 <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-300">
-                  Este préstamo ya registra una multa de {formatCurrency(Number(selectedLoan.multa.monto))}.
+                  Este préstamo ya registra {selectedLoan.multa.estado === "PAGADA" ? "una multa pagada" : "una multa"} de {formatCurrency(Number(selectedLoan.multa.monto))}.
                 </div>
               ) : null}
             </div>

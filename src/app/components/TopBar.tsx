@@ -27,6 +27,7 @@ const iconMap: Record<Notification["icon"], React.ReactNode> = {
 export const TopBar = ({ onMenuToggle }: TopBarProps) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const notificationsFeatureEnabled = false;
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -104,48 +105,54 @@ export const TopBar = ({ onMenuToggle }: TopBarProps) => {
               : <Moon size={20} className="text-gray-600" />}
           </button>
 
-          {/* Campana */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => { setShowNotifications((p) => !p); setShowUserMenu(false); }}
-              className="relative rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-[#323866]"
-            >
-              <Bell size={20} className="text-gray-600 dark:text-[#F5F7FF]" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+          {/*
+            Reserved for the future in-app notifications tray.
+            Do not remove this feature scaffold or its trigger button permanently:
+            it will be reused when book-request approval notifications are implemented.
+          */}
+          {notificationsFeatureEnabled && (
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setShowNotifications((p) => !p); setShowUserMenu(false); }}
+                className="relative rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-[#323866]"
+              >
+                <Bell size={20} className="text-gray-600 dark:text-[#F5F7FF]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {showNotifications && (
-              <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-[#3C4270] dark:bg-[#2A2F57]">
-                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-[#3C4270]">
-                  <span className="font-semibold text-gray-800 dark:text-[#F5F7FF] text-sm">Notificaciones</span>
-                  {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="text-xs text-[#6C5CE7] hover:underline">
-                      Marcar todas como leídas
-                    </button>
-                  )}
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="flex flex-col items-center py-8 text-gray-400 dark:text-[#8E95B5]">
-                      <CheckCircle size={28} className="mb-2 text-green-400" />
-                      <p className="text-sm">Sin notificaciones</p>
-                    </div>
-                  ) : notifications.map((n) => (
-                    <div key={n.id} className={`flex items-start gap-3 border-b border-gray-50 px-4 py-3 dark:border-[#3C4270] ${!n.read ? "bg-[#6C5CE7]/8 dark:bg-[#323866]" : ""}`}>
-                      <div className={`mt-0.5 ${n.type === "fine" ? "text-red-500" : "text-[#6C5CE7]"}`}>
-                        {n.type === "fine" ? <AlertCircle size={16} /> : iconMap[n.icon]}
+              {showNotifications && (
+                <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-[#3C4270] dark:bg-[#2A2F57]">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-[#3C4270]">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-[#F5F7FF]">Notificaciones</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-xs text-[#6C5CE7] hover:underline">
+                        Marcar todas como leídas
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center py-8 text-gray-400 dark:text-[#8E95B5]">
+                        <CheckCircle size={28} className="mb-2 text-green-400" />
+                        <p className="text-sm">Sin notificaciones</p>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-[#F5F7FF]">{n.message}</p>
-                    </div>
-                  ))}
+                    ) : notifications.map((n) => (
+                      <div key={n.id} className={`flex items-start gap-3 border-b border-gray-50 px-4 py-3 dark:border-[#3C4270] ${!n.read ? "bg-[#6C5CE7]/8 dark:bg-[#323866]" : ""}`}>
+                        <div className={`mt-0.5 ${n.type === "fine" ? "text-red-500" : "text-[#6C5CE7]"}`}>
+                          {n.type === "fine" ? <AlertCircle size={16} /> : iconMap[n.icon]}
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-[#F5F7FF]">{n.message}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Avatar / menú usuario */}
           <div className="relative" ref={userRef}>

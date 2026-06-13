@@ -12,6 +12,7 @@ import { Label } from "../components/ui/label";
 import { AlertTriangle, DollarSign, History, Plus, Search, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { formatDateEs, parseLocalDate } from "../../services/dates";
 import { useAuth } from "../context/AuthContext";
 
 interface BackendFine {
@@ -103,7 +104,7 @@ const formatCurrency = (value: number) =>
 
 const formatDate = (value?: string | null) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const getTypeLabel = (type: ManualFineType) => {
@@ -223,7 +224,8 @@ export const FinesPage = () => {
     }));
 
     return [...mappedBackend, ...manualFines].sort(
-      (left, right) => new Date(right.fechaGeneracion).getTime() - new Date(left.fechaGeneracion).getTime(),
+      (left, right) =>
+        parseLocalDate(right.fechaGeneracion).getTime() - parseLocalDate(left.fechaGeneracion).getTime(),
     );
   }, [backendFines, manualFines]);
 
@@ -259,7 +261,7 @@ export const FinesPage = () => {
     }));
 
     return [...mappedBackendPayments, ...manualPayments].sort(
-      (left, right) => new Date(right.fechaPago).getTime() - new Date(left.fechaPago).getTime(),
+      (left, right) => parseLocalDate(right.fechaPago).getTime() - parseLocalDate(left.fechaPago).getTime(),
     );
   }, [backendPayments, manualPayments]);
 

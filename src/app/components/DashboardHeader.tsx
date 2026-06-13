@@ -4,6 +4,8 @@ import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export function DashboardHeader() {
+  const notificationsFeatureEnabled = false;
+
   return (
     <header className="border-b bg-white px-6 py-4">
       <div className="flex items-center justify-between">
@@ -19,10 +21,16 @@ export function DashboardHeader() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          </Button>
+          {/*
+            Reserved for the future in-app notifications tray.
+            Do not delete this button concept permanently; it will be reused later.
+          */}
+          {notificationsFeatureEnabled && (
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+            </Button>
+          )}
           
           <div className="flex items-center gap-3">
             <Avatar>

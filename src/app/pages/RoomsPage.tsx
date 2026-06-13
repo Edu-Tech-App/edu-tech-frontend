@@ -10,6 +10,7 @@ import { Users, DoorOpen, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../../services/api";
+import { addDays, toDateInputValue } from "../../services/dates";
 
 interface StudyRoom {
   id: number;
@@ -35,7 +36,7 @@ interface RoomReservation {
 export const RoomsPage = () => {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(toDateInputValue(new Date()));
   const [selectedTime, setSelectedTime] = useState("");
   const [showReservationDialog, setShowReservationDialog] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<StudyRoom | null>(null);
@@ -44,7 +45,7 @@ export const RoomsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split("T")[0],
+    date: toDateInputValue(new Date()),
     startTime: "",
     endTime: "",
   });
@@ -73,9 +74,7 @@ export const RoomsPage = () => {
   }, [user?.id]);
 
   const getMaxDate = () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 7);
-    return date.toISOString().split("T")[0];
+    return toDateInputValue(addDays(new Date(), 7));
   };
 
   const hasActiveReservationForRoom = (roomId: number) =>
@@ -110,7 +109,7 @@ export const RoomsPage = () => {
       return;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = toDateInputValue(new Date());
     if (formData.date < today || formData.date > getMaxDate()) {
       toast.error("Solo puedes reservar con hasta 7 días de anticipación");
       return;
@@ -200,7 +199,7 @@ export const RoomsPage = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={toDateInputValue(new Date())}
                   max={getMaxDate()}
                   className="dark:bg-gray-700 dark:border-gray-600"
                 />
@@ -293,7 +292,7 @@ export const RoomsPage = () => {
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={toDateInputValue(new Date())}
                   max={getMaxDate()}
                   className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />

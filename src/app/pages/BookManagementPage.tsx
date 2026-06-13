@@ -11,7 +11,9 @@ import { Badge } from "../components/ui/badge";
 import { Label } from "../components/ui/label";
 import { BookOpen, CalendarClock, Edit, History, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { api, API_URL_PUBLIC, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
+import { api, API_URL_PUBLIC, type BookCategory } from "../../services/api";
+import { formatBookCategory } from "../../services/catalogs";
+import { formatDateEs } from "../../services/dates";
 import { useAuth } from "../context/AuthContext";
 
 interface Book {
@@ -37,30 +39,12 @@ interface LoanRecord {
   multa?: { monto?: number; estado?: string };
 }
 
-const formatCategory = (categoria: string | null) => {
-  if (!categoria) return "Sin categoría";
-
-  const labels: Record<BookCategory, string> = {
-    INGENIERIA_SISTEMAS: "Ingeniería de Sistemas",
-    INGENIERIA_CIVIL: "Ingeniería Civil",
-    INGENIERIA_INDUSTRIAL: "Ingeniería Industrial",
-    ADMINISTRACION: "Administración",
-    CONTADURIA: "Contaduría",
-    ECONOMIA: "Economía",
-    DERECHO: "Derecho",
-    MEDICINA: "Medicina",
-    ENFERMERIA: "Enfermería",
-    PSICOLOGIA: "Psicología",
-    EDUCACION: "Educación",
-    MATEMATICAS: "Matemáticas",
-  };
-
-  return labels[categoria as BookCategory] || categoria;
-};
+const formatCategory = (categoria: string | null) =>
+  !categoria ? "Sin categoría" : formatBookCategory(categoria);
 
 const formatDate = (value?: string | null) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const formatStatus = (estado: string) => {
@@ -101,6 +85,7 @@ export const BookManagementPage = () => {
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [bookCategoryOptions, setBookCategoryOptions] = useState<string[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loans, setLoans] = useState<LoanRecord[]>([]);
   const [formData, setFormData] = useState({
@@ -116,12 +101,14 @@ export const BookManagementPage = () => {
     setLoading(true);
     try {
       const isManager = user?.rol === "administrativo" || user?.rol === "bibliotecario";
-      const [booksData, loansData] = await Promise.all([
+      const [booksData, loansData, catalogs] = await Promise.all([
         api.getBooks(),
-        isManager ? api.getLoans().catch(() => []) : Promise.resolve([])
+        isManager ? api.getLoans().catch(() => []) : Promise.resolve([]),
+        api.getSystemCatalogs().catch(() => null),
       ]);
       setBooks(booksData);
       setLoans(loansData);
+      setBookCategoryOptions(catalogs?.bookCategories.map((item) => item.value) ?? []);
     } catch (error: any) {
       toast.error(error.message || "No se pudieron cargar los datos de biblioteca");
     } finally {
@@ -537,7 +524,7 @@ export const BookManagementPage = () => {
                   </SelectTrigger>
                   <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
                     <SelectItem value="NONE" className="dark:text-white dark:focus:bg-gray-700">Sin categoría</SelectItem>
-                    {BOOK_CATEGORY_OPTIONS.map((category) => (
+                    {bookCategoryOptions.map((category) => (
                       <SelectItem key={category} value={category} className="dark:text-white dark:focus:bg-gray-700">
                         {formatCategory(category)}
                       </SelectItem>

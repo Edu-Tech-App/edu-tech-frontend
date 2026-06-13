@@ -11,6 +11,7 @@ import { DoorOpen, Calendar, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../../services/api";
+import { formatDateEs, parseLocalDate } from "../../services/dates";
 
 interface Reservation {
   id: number;
@@ -126,7 +127,7 @@ export const MyRoomReservationsPage = () => {
                         <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-xs font-medium uppercase tracking-wider text-gray-400">
                           <div className="flex items-center gap-2">
                             <Calendar size={14} />
-                            <span>{new Date(r.fechaReserva).toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
+                            <span>{formatDateEs(r.fechaReserva, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock size={14} />
@@ -168,7 +169,7 @@ export const MyRoomReservationsPage = () => {
                     pastReservations.map((r) => (
                       <TableRow key={r.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
                         <TableCell className="font-medium text-gray-700 dark:text-white">{r.sala?.nombre}</TableCell>
-                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{new Date(r.fechaReserva).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{formatDateEs(r.fechaReserva)}</TableCell>
                         <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{r.horaInicio} - {r.horaFin}</TableCell>
                         <TableCell>{getStatusBadge(r.estado)}</TableCell>
                       </TableRow>
@@ -190,7 +191,7 @@ export const MyRoomReservationsPage = () => {
               <div className={`${sectionBg} border border-rose-100 dark:border-rose-900/30 bg-rose-50/30 dark:bg-rose-950/10`}>
                 <p className="text-xs font-bold uppercase tracking-widest text-rose-600 mb-2">Detalles de la reserva</p>
                 <ul className="space-y-1 text-sm text-gray-700 dark:text-[#F5F7FF]">
-                  <li><span className="font-medium">Fecha:</span> {selectedReservation && new Date(selectedReservation.fechaReserva).toLocaleDateString("es-ES")}</li>
+                  <li><span className="font-medium">Fecha:</span> {selectedReservation ? formatDateEs(selectedReservation.fechaReserva) : "-"}</li>
                   <li><span className="font-medium">Horario:</span> {selectedReservation?.horaInicio} - {selectedReservation?.horaFin}</li>
                 </ul>
               </div>

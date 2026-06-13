@@ -7,13 +7,13 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, BookOpen } from "lucide-react";
 import { toast } from "sonner";
-import { api, type BookCategory } from "../../services/api";
+import { api, API_URL_PUBLIC, type BookCategory } from "../../services/api";
 
 interface LibraryBook {
   id: number; titulo: string; autor: string; categoria: string | null;
-  editorial: string | null; cantidadDisponible: number; estado: string;
+  editorial: string | null; cantidadDisponible: number; estado: string; portadaUrl?: string | null;
 }
 
 const formatCategory = (categoria: string | null) => {
@@ -112,6 +112,7 @@ export const LibraryCatalogPage = () => {
               <Table className="w-full text-sm">
                 <TableHeader>
                   <TableRow className="border-b border-gray-100 bg-[#EEF2FF] dark:border-gray-700 dark:bg-[#2F355F]">
+                    <TableHead className="h-11 w-[92px] font-semibold text-gray-700 dark:text-[#E6EBFF]">Portada</TableHead>
                     <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Título</TableHead>
                     <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Autor</TableHead>
                     <TableHead className="h-11 font-semibold text-gray-700 dark:text-[#E6EBFF]">Categoría</TableHead>
@@ -123,12 +124,29 @@ export const LibraryCatalogPage = () => {
                 </TableHeader>
                 <TableBody className="[&_tr:last-child]:border-0">
                   {loading ? (
-                    <TableRow><TableCell colSpan={7} className="py-12 text-center text-gray-500">Cargando libros...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="py-12 text-center text-gray-500">Cargando libros...</TableCell></TableRow>
                   ) : filteredBooks.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="py-12 text-center text-gray-500">No se encontraron libros.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="py-12 text-center text-gray-500">No se encontraron libros.</TableCell></TableRow>
                   ) : (
                     filteredBooks.map((book) => (
                       <TableRow key={book.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-700 dark:hover:bg-gray-700/50">
+                        <TableCell className="px-4 py-3 align-middle lg:py-2">
+                          <div className="relative flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+                            <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                              <BookOpen size={15} />
+                            </div>
+                            {book.portadaUrl ? (
+                              <img
+                                src={`${API_URL_PUBLIC}${book.portadaUrl}`}
+                                alt={book.titulo}
+                                className="absolute inset-0 h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium text-gray-700 dark:text-white">{book.titulo}</TableCell>
                         <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{book.autor}</TableCell>
                         <TableCell className="text-gray-600 dark:text-[#B7BDD6]">{formatCategory(book.categoria)}</TableCell>

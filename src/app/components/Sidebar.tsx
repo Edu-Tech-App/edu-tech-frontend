@@ -32,6 +32,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: BookOpen, label: 'Biblioteca', path: '/library' },
           { icon: DoorOpen, label: 'Salas', path: '/rooms' },
           { icon: CalendarCheck, label: 'Mis Reservas', path: '/my-room-reservations' },
+          { icon: BookMarked, label: 'Mis Préstamos', path: '/my-loans' },
+          { icon: DollarSign, label: 'Mis Multas', path: '/my-fines' },
         ];
       case 'bibliotecario':
         return [

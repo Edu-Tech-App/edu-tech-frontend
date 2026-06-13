@@ -10,6 +10,7 @@ import { Label } from "../components/ui/label";
 import { BookOpen, CalendarRange, DoorOpen, Download, FileSpreadsheet, FileText, GraduationCap, Search, ShieldAlert, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { formatDateEs, parseLocalDate, toDateInputValue } from "../../services/dates";
 import { useAuth } from "../context/AuthContext";
 
 interface UserRecord {
@@ -66,10 +67,7 @@ interface SubjectRecord {
   nombre: string;
 }
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
-};
+const formatDate = (value?: string | null) => formatDateEs(value);
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
@@ -121,7 +119,7 @@ const toHtmlReportBlob = (title: string, headers: string[], rows: string[][]) =>
       </head>
       <body>
         <h1>${title}</h1>
-        <p>Generado el ${new Date().toLocaleDateString("es-ES")}</p>
+        <p>Generado el ${formatDateEs(new Date())}</p>
         <table>
           <thead><tr>${tableHeaders}</tr></thead>
           <tbody>${tableRows}</tbody>
@@ -142,8 +140,8 @@ export const ReportsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
-  const [startDate, setStartDate] = useState(() => new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]);
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [startDate, setStartDate] = useState(() => toDateInputValue(new Date(new Date().getFullYear(), 0, 1)));
+  const [endDate, setEndDate] = useState(() => toDateInputValue(new Date()));
   const [academicPeriod, setAcademicPeriod] = useState("all");
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -209,9 +207,9 @@ export const ReportsPage = () => {
 
   const withinRange = (value?: string) => {
     if (!value) return false;
-    const date = new Date(value);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const date = parseLocalDate(value);
+    const start = parseLocalDate(startDate);
+    const end = parseLocalDate(endDate);
     end.setHours(23, 59, 59, 999);
     return date >= start && date <= end;
   };
