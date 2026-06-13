@@ -1,17 +1,9 @@
 name: Frontend CI
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - develop
-      - dev
-      - staging
-      - qa
-      - "feature/**"
-      - "fix/**"
-      - "hotfix/**"
-  pull_request:
   workflow_dispatch:
 
 concurrency:
