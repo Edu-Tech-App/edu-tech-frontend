@@ -11,21 +11,10 @@ import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { BookMarked, CalendarCheck, ChevronLeft, ChevronRight, Edit, Eye, GraduationCap, Plus, Search, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
-import { api, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
+import { api, type BookCategory } from "../../services/api";
+import { formatBookCategory } from "../../services/catalogs";
+import { formatDateEs } from "../../services/dates";
 import { useAuth } from "../context/AuthContext";
-
-const ROLE_OPTIONS = [
-  { value: "ESTUDIANTE", label: "Estudiante" },
-  { value: "DOCENTE", label: "Docente" },
-  { value: "BIBLIOTECARIO", label: "Bibliotecario" },
-  { value: "ADMINISTRATIVO", label: "Administrativo" },
-  { value: "SUPERVISOR", label: "Supervisor" },
-] as const;
-
-const STATUS_OPTIONS = [
-  { value: "ACTIVO", label: "Activo" },
-  { value: "INACTIVO", label: "Inactivo" },
-] as const;
 
 const FILTER_OPTIONS = [
   { value: "all", label: "Todos" },
@@ -68,13 +57,13 @@ const formatCurrency = (value: number) =>
 
 const formatDate = (value?: string) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const toUpperRole = (role: UserRecord["rol"]) => role.toUpperCase() as "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
 const toUpperStatus = (status: UserRecord["estado"]) => status.toUpperCase() as "ACTIVO" | "INACTIVO";
 const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
-const formatCareer = (value: string) => value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+const formatCareer = (value: string) => formatBookCategory(value) || value;
 
 export const UserManagementPage = () => {
   const { user: authUser } = useAuth();
@@ -91,6 +80,9 @@ export const UserManagementPage = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [careerOptions, setCareerOptions] = useState<string[]>([]);
+  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [statusOptions, setStatusOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [saving, setSaving] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,7 +101,10 @@ export const UserManagementPage = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await api.getUsers();
+      const [data, catalogs] = await Promise.all([
+        api.getUsers(),
+        api.getSystemCatalogs().catch(() => null),
+      ]);
       setUsers(
         (Array.isArray(data) ? data : []).map((item) => ({
           ...item,
@@ -117,6 +112,9 @@ export const UserManagementPage = () => {
           estado: String(item.estado || "").toLowerCase(),
         })),
       );
+      setCareerOptions(catalogs?.bookCategories.map((item) => item.value) ?? []);
+      setRoleOptions(catalogs?.userRoles ?? []);
+      setStatusOptions(catalogs?.userStatuses ?? []);
     } catch (error: any) {
       toast.error(error.message || "Error al cargar usuarios");
     } finally {
@@ -446,7 +444,7 @@ export const UserManagementPage = () => {
                   <Select value={newUser.rol} onValueChange={(value) => setNewUser({ ...newUser, rol: value, carrera: value === "ESTUDIANTE" ? newUser.carrera : "" })}>
                     <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                     <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                      {ROLE_OPTIONS.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
+                      {roleOptions.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -456,7 +454,7 @@ export const UserManagementPage = () => {
                     <Select value={newUser.carrera} onValueChange={(value) => setNewUser({ ...newUser, carrera: value })}>
                       <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona una carrera" /></SelectTrigger>
                       <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        {BOOK_CATEGORY_OPTIONS.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
+                        {careerOptions.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <p className="mt-1 text-xs text-rose-500 dark:text-rose-300">Obligatoria para estudiantes.</p>
@@ -487,7 +485,7 @@ export const UserManagementPage = () => {
                     <Select value={editUser.rol} onValueChange={(value) => setEditUser({ ...editUser, rol: value, carrera: value === "ESTUDIANTE" ? editUser.carrera : "" })}>
                       <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue /></SelectTrigger>
                       <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        {ROLE_OPTIONS.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
+                        {roleOptions.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -497,7 +495,7 @@ export const UserManagementPage = () => {
                       <Select value={editUser.carrera} onValueChange={(value) => setEditUser({ ...editUser, carrera: value })}>
                         <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona una carrera" /></SelectTrigger>
                         <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                          {BOOK_CATEGORY_OPTIONS.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
+                          {careerOptions.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -507,7 +505,7 @@ export const UserManagementPage = () => {
                     <Select value={editUser.estado} onValueChange={(value) => setEditUser({ ...editUser, estado: value })}>
                       <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue /></SelectTrigger>
                       <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        {STATUS_OPTIONS.map((status) => <SelectItem key={status.value} value={status.value} className="dark:text-white dark:focus:bg-gray-700">{status.label}</SelectItem>)}
+                        {statusOptions.map((status) => <SelectItem key={status.value} value={status.value} className="dark:text-white dark:focus:bg-gray-700">{status.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

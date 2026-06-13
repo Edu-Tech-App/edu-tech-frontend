@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Badge } from "../components/ui/badge";
 import { BookMarked, CalendarCheck, CheckCircle2, Clock3, DoorOpen, History, RefreshCcw, Search, XCircle } from "lucide-react";
 import { api } from "../../services/api";
+import { formatDateEs } from "../../services/dates";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 
@@ -58,7 +59,7 @@ const mapBookStatus = (status: BookReservationRecord["estado"]): UnifiedReservat
 
 const formatDate = (value?: string) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const getStatusLabel = (status: UnifiedReservation["status"]) => {

@@ -10,6 +10,7 @@ import { Badge } from "../components/ui/badge";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { formatDateEs } from "../../services/dates";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 interface BookRecord { id: number; titulo: string; cantidadDisponible: number; estado: string; }
@@ -149,8 +150,8 @@ export const BookReservationsManagementPage = () => {
                       <TableRow key={loan.id} className="hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
                         <TableCell className="font-medium dark:text-white">{loan.bookTitle}</TableCell>
                         <TableCell className="dark:text-gray-400">{loan.studentName}</TableCell>
-                        <TableCell className="dark:text-gray-400">{new Date(loan.loanDate).toLocaleDateString("es-ES")}</TableCell>
-                        <TableCell className="dark:text-gray-400">{new Date(loan.dueDate).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell className="dark:text-gray-400">{formatDateEs(loan.loanDate)}</TableCell>
+                        <TableCell className="dark:text-gray-400">{formatDateEs(loan.dueDate)}</TableCell>
                         <TableCell><Badge className="bg-[#6C5CE7]/80">{loan.status}</Badge></TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">

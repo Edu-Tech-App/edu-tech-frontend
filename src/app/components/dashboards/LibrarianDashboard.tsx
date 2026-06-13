@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { BookMarked, Clock, DollarSign, Library } from "lucide-react";
+import { formatDateEs } from "../../../services/dates";
 
 interface LibrarianDashboardProps {
   data: {
@@ -19,7 +20,7 @@ const formatCurrency = (value: number) =>
 
 const formatDate = (value?: string | null) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 export const LibrarianDashboard = ({ data }: LibrarianDashboardProps) => {

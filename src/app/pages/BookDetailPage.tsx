@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
-import { api, API_URL_PUBLIC, type BookCategory } from "../../services/api";
+import { api, API_URL_PUBLIC } from "../../services/api";
+import { formatBookCategory } from "../../services/catalogs";
+import { formatDateEs, parseLocalDate, toDateInputValue } from "../../services/dates";
 
 interface BookDetail {
   id: number;
@@ -21,24 +23,8 @@ interface BookDetail {
   estado: string;
 }
 
-const formatCategory = (categoria: string | null) => {
-  if (!categoria) return "Sin categoría";
-  const labels: Record<BookCategory, string> = {
-    INGENIERIA_SISTEMAS: "Ingeniería de Sistemas",
-    INGENIERIA_CIVIL: "Ingeniería Civil",
-    INGENIERIA_INDUSTRIAL: "Ingeniería Industrial",
-    ADMINISTRACION: "Administración",
-    CONTADURIA: "Contaduría",
-    ECONOMIA: "Economía",
-    DERECHO: "Derecho",
-    MEDICINA: "Medicina",
-    ENFERMERIA: "Enfermería",
-    PSICOLOGIA: "Psicología",
-    EDUCACION: "Educación",
-    MATEMATICAS: "Matemáticas",
-  };
-  return labels[categoria as BookCategory] || categoria;
-};
+const formatCategory = (categoria: string | null) =>
+  !categoria ? "Sin categoría" : formatBookCategory(categoria) || categoria;
 
 export const BookDetailPage = () => {
   const { id } = useParams();
@@ -66,20 +52,43 @@ export const BookDetailPage = () => {
     void loadBook();
   }, [id, navigate]);
 
-  const handleBorrow = () => {
+  const handleBorrow = async () => {
     if (!book) return;
     if (book.cantidadDisponible <= 0 || book.estado !== "DISPONIBLE") {
       toast.error("Este libro no está disponible para préstamo en este momento.");
       return;
     }
+
+    if (user?.id) {
+      try {
+        const loans = await api.getStudentLoans(user.id);
+        const hasActiveLoan = (Array.isArray(loans) ? loans : []).some(
+          (loan) => loan?.libroId === book.id && loan?.estado === "ACTIVO",
+        );
+
+        if (hasActiveLoan) {
+          toast.error("Ya tienes este libro prestado actualmente. Debes devolverlo antes de solicitarlo de nuevo.");
+          return;
+        }
+      } catch {
+        // Si esta validación falla, dejamos que el backend conserve la última palabra.
+      }
+    }
+
     setShowBorrowDialog(true);
   };
 
   const dueDate = (() => {
     const date = new Date();
     date.setDate(date.getDate() + 30);
-    return date.toISOString().split("T")[0];
+    return toDateInputValue(date);
   })();
+
+  const dueDateLabel = new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(parseLocalDate(dueDate));
 
   const confirmBorrow = async () => {
     if (!book || !user?.id) return;
@@ -140,7 +149,9 @@ export const BookDetailPage = () => {
     return (
       <PageLayout>
         <div className="p-6">
-          <Card><CardContent className="p-6 text-gray-500">Cargando libro...</CardContent></Card>
+          <Card className="border-gray-200 dark:border-gray-700 dark:bg-gray-800">
+            <CardContent className="p-6 text-gray-600 dark:text-gray-300">Cargando libro...</CardContent>
+          </Card>
         </div>
       </PageLayout>
     );
@@ -151,17 +162,25 @@ export const BookDetailPage = () => {
   return (
     <PageLayout>
       <div className="p-6">
-        <Button variant="ghost" onClick={() => navigate('/library')} className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/library')}
+          className="mb-4 text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white"
+        >
           <ArrowLeft size={16} className="mr-2" />
           Volver al Catálogo
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1">
-            <Card>
+            <Card className="border-gray-200 dark:border-gray-700 dark:bg-gray-800">
               <CardContent className="p-6">
                 {book.portadaUrl ? (
-                  <img src={`${API_URL_PUBLIC}${book.portadaUrl}`} alt={book.titulo} className="aspect-[3/4] rounded-lg mb-4 w-full object-cover border" />
+                  <img
+                    src={`${API_URL_PUBLIC}${book.portadaUrl}`}
+                    alt={book.titulo}
+                    className="mb-4 aspect-[3/4] w-full rounded-lg border border-gray-200 object-cover dark:border-gray-700"
+                  />
                 ) : (
                   <div className={`aspect-[3/4] rounded-lg mb-4 overflow-hidden bg-gradient-to-br ${getCoverStyles(book.categoria)}`}>
                     <div className="h-full flex flex-col justify-between p-6 text-white">
@@ -181,30 +200,48 @@ export const BookDetailPage = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Badge className={book.estado === "DISPONIBLE" ? "bg-green-500" : "bg-yellow-500"}>{formatStatus(book.estado)}</Badge>
-                  <p className="text-sm text-gray-600">{book.cantidadDisponible} copias disponibles</p>
+                  <Badge className={book.estado === "DISPONIBLE" ? "bg-emerald-600 text-white dark:bg-emerald-500" : "bg-amber-500 text-slate-950 dark:bg-amber-400"}>
+                    {formatStatus(book.estado)}
+                  </Badge>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{book.cantidadDisponible} copias disponibles</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="md:col-span-2 space-y-6">
-            <Card>
+            <Card className="border-gray-200 dark:border-gray-700 dark:bg-gray-800">
               <CardHeader>
-                <CardTitle className="text-2xl">{book.titulo}</CardTitle>
-                <p className="text-gray-600">{book.autor}</p>
+                <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">{book.titulo}</CardTitle>
+                <p className="text-base font-medium text-gray-700 dark:text-gray-300">{book.autor}</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-700">Consulta la información principal del libro seleccionado dentro del catálogo institucional.</p>
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div><p className="text-sm text-gray-600">ID</p><p className="font-medium">{book.id}</p></div>
-                  <div><p className="text-sm text-gray-600">Categoría</p><p className="font-medium">{formatCategory(book.categoria)}</p></div>
-                  <div><p className="text-sm text-gray-600">Editorial</p><p className="font-medium">{book.editorial || "Sin editorial"}</p></div>
-                  <div><p className="text-sm text-gray-600">Estado</p><p className="font-medium">{formatStatus(book.estado)}</p></div>
+                <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">
+                  Consulta la información principal del libro seleccionado dentro del catálogo institucional.
+                </p>
+                <div className="grid grid-cols-2 gap-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">ID</p>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">{book.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Categoría</p>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">{formatCategory(book.categoria)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Editorial</p>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">{book.editorial || "Sin editorial"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Estado</p>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">{formatStatus(book.estado)}</p>
+                  </div>
                 </div>
-                {user?.rol === "estudiante" && (
+                {(user?.rol === "estudiante" || user?.rol === "docente") && (
                   <div className="pt-4">
-                    <Button onClick={handleBorrow} className="w-full bg-[#6C5CE7] hover:bg-[#5b4bd1]">Solicitar Préstamo</Button>
+                    <Button onClick={() => void handleBorrow()} className="w-full bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                      Solicitar Préstamo
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -213,17 +250,24 @@ export const BookDetailPage = () => {
         </div>
 
         <Dialog open={showBorrowDialog} onOpenChange={setShowBorrowDialog}>
-          <DialogContent>
+          <DialogContent className="dark:border-gray-700 dark:bg-gray-800">
             <DialogHeader>
-              <DialogTitle>Confirmar Préstamo</DialogTitle>
-              <DialogDescription>¿Estás seguro de que quieres solicitar "{book.titulo}"?</DialogDescription>
+              <DialogTitle className="text-gray-900 dark:text-white">Confirmar Préstamo</DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-300">
+                ¿Estás seguro de que quieres solicitar "{book.titulo}"?
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-sm text-gray-600">Fecha de vencimiento: 24 de mayo, 2026 (30 días)</p>
-              <p className="text-sm text-gray-600 mt-2">Las devoluciones tardías tendrán una multa de $1 por día.</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Fecha de vencimiento: {dueDateLabel} (30 días)</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Las devoluciones tardías tendrán una multa de $1 por día.</p>
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+                Al solicitar este libro, tu pedido quedará registrado y se te notificará cuando el bibliotecario apruebe la solicitud para que puedas pasar por el libro en la biblioteca.
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => setShowBorrowDialog(false)} className="dark:border-gray-600 dark:text-gray-200">
+                Cancelar
+              </Button>
               <Button onClick={confirmBorrow} disabled={submittingLoan} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
                 {submittingLoan ? "Procesando..." : "Confirmar"}
               </Button>

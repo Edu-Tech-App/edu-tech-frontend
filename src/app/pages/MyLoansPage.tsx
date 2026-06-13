@@ -9,6 +9,7 @@ import { BookOpen, Calendar, AlertCircle, CheckCircle, Search, Clock } from "luc
 import { Input } from "../components/ui/input";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../../services/api";
+import { formatDateEs, parseLocalDate } from "../../services/dates";
 
 interface Loan {
   id: number;
@@ -21,10 +22,7 @@ interface Loan {
   libro: { id: number; titulo: string; autor: string };
 }
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
-};
+const formatDate = (value?: string | null) => formatDateEs(value);
 
 export const MyLoansPage = () => {
   const { user } = useAuth();
@@ -70,7 +68,7 @@ export const MyLoansPage = () => {
   const getDaysUntilDue = (dueDate: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const due = new Date(dueDate);
+    const due = parseLocalDate(dueDate);
     due.setHours(0, 0, 0, 0);
     return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };

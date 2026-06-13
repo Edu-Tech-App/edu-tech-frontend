@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { FaGraduationCap } from "react-icons/fa6";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { formatBookCategory, type BookCategory } from "../../services/catalogs";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -14,19 +15,35 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [careerOptions, setCareerOptions] = useState<string[]>([]);
   const [newStudent, setNewStudent] = useState({
     nombreCompleto: "",
     documentoIdentidad: "",
     correo: "",
     password: "",
     confirmarPassword: "",
+    carrera: "",
   });
+
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        const catalogs = await api.getSystemCatalogs();
+        setCareerOptions(catalogs.bookCategories.map((item) => item.value));
+      } catch {
+        setCareerOptions([]);
+      }
+    };
+
+    void loadCatalogs();
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +52,8 @@ export const RegisterPage = () => {
       !newStudent.nombreCompleto ||
       !newStudent.documentoIdentidad ||
       !newStudent.correo ||
-      !newStudent.password
+      !newStudent.password ||
+      !newStudent.carrera
     ) {
       toast.error("Por favor completa todos los campos");
       return;
@@ -60,6 +78,7 @@ export const RegisterPage = () => {
         correo: newStudent.correo,
         password: newStudent.password,
         rol: "ESTUDIANTE",
+        carrera: newStudent.carrera as BookCategory,
       });
 
       toast.success("¡Cuenta creada! Ya puedes iniciar sesión.");
@@ -135,6 +154,28 @@ export const RegisterPage = () => {
                 required
                 className="border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus-visible:border-[#6C5CE7] dark:border-gray-700 dark:bg-gray-700/60 dark:text-[#F5F7FF] dark:placeholder-[#8E95B5]"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="carrera" className="text-gray-700 dark:text-[#F5F7FF]">Carrera</Label>
+              <Select
+                value={newStudent.carrera}
+                onValueChange={(value) => setNewStudent({ ...newStudent, carrera: value })}
+              >
+                <SelectTrigger
+                  id="carrera"
+                  className="border-gray-200 bg-white text-gray-900 focus:ring-[#6C5CE7] dark:border-gray-700 dark:bg-gray-700/60 dark:text-[#F5F7FF]"
+                >
+                  <SelectValue placeholder="Selecciona tu carrera" />
+                </SelectTrigger>
+                <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
+                  {careerOptions.map((career) => (
+                    <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">
+                      {formatBookCategory(career)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

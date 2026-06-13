@@ -13,6 +13,7 @@ import { Badge } from "../components/ui/badge";
 import { CalendarDays, Edit, MapPin, Plus, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../services/api";
+import { formatDateEs, parseLocalDate } from "../../services/dates";
 
 interface RoomRecord {
   id: number;
@@ -34,14 +35,9 @@ interface ReservationRecord {
   docente?: { user?: { nombreCompleto: string } };
 }
 
-const STATUS_OPTIONS = [
-  { value: "ACTIVA", label: "Activa" },
-  { value: "INACTIVA", label: "Inactiva" },
-] as const;
-
 const formatDate = (value?: string) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const getRoomStatusClass = (estado: RoomRecord["estado"]) => {
@@ -59,6 +55,7 @@ const getReservationStatusClass = (estado: ReservationRecord["estado"]) => {
 export const RoomsManagementPage = () => {
   const { user: authUser } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [roomStatusOptions, setRoomStatusOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,13 +81,15 @@ export const RoomsManagementPage = () => {
         setLoading(true);
         const canViewReservations = authUser?.rol === "administrativo" || authUser?.rol === "supervisor";
         
-        const [roomsData, reservationsData] = await Promise.all([
+        const [roomsData, reservationsData, catalogs] = await Promise.all([
           api.getStudyRooms(),
           canViewReservations ? api.getRoomReservations().catch(() => []) : Promise.resolve([]),
+          api.getSystemCatalogs().catch(() => null),
         ]);
 
         setRooms(roomsData);
         setReservations(reservationsData);
+        setRoomStatusOptions(catalogs?.studyRoomStatuses ?? []);
       } catch (error: any) {
         toast.error(error.message || "No se pudieron cargar las salas");
       } finally {
@@ -135,7 +134,7 @@ export const RoomsManagementPage = () => {
   const getRoomReservationsList = (roomId: number) =>
     reservations
       .filter((reservation) => reservation.salaId === roomId)
-      .sort((left, right) => new Date(right.fechaReserva).getTime() - new Date(left.fechaReserva).getTime());
+      .sort((left, right) => parseLocalDate(right.fechaReserva).getTime() - parseLocalDate(left.fechaReserva).getTime());
 
   const openDialog = (room?: RoomRecord) => {
     if (room) {
@@ -225,6 +224,9 @@ export const RoomsManagementPage = () => {
     setShowDetailDialog(true);
   };
 
+  const getRoomStatusLabel = (value: string) =>
+    roomStatusOptions.find((status) => status.value === value)?.label || value;
+
   return (
     <div className="h-screen overflow-hidden bg-background transition-colors">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -310,7 +312,7 @@ export const RoomsManagementPage = () => {
                                 <td className="px-4 py-3 align-middle text-gray-700 dark:text-gray-400 lg:py-2">{room.ubicacion}</td>
                                 <td className="px-4 py-3 align-middle lg:py-2">
                                   <Badge className={getRoomStatusClass(room.estado)}>
-                                    {STATUS_OPTIONS.find((status) => status.value === room.estado)?.label || room.estado}
+                                    {getRoomStatusLabel(room.estado)}
                                   </Badge>
                                 </td>
                                 <td className="px-4 py-3 align-middle lg:py-2">
@@ -406,7 +408,7 @@ export const RoomsManagementPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
-                      {STATUS_OPTIONS.map((status) => (
+                      {roomStatusOptions.map((status) => (
                         <SelectItem key={status.value} value={status.value} className="dark:text-white dark:focus:bg-gray-700">
                           {status.label}
                         </SelectItem>
@@ -493,7 +495,7 @@ export const RoomsManagementPage = () => {
                       <div>
                         <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">Estado</p>
                         <div className="mt-2">
-                          {selectedRoom && <Badge className={getRoomStatusClass(selectedRoom.estado)}>{STATUS_OPTIONS.find((status) => status.value === selectedRoom.estado)?.label || selectedRoom.estado}</Badge>}
+                          {selectedRoom && <Badge className={getRoomStatusClass(selectedRoom.estado)}>{getRoomStatusLabel(selectedRoom.estado)}</Badge>}
                         </div>
                       </div>
                     </div>

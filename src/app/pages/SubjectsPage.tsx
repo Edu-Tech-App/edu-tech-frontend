@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { BookOpen, GraduationCap, Pencil, Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
-import { api, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
+import { api, type BookCategory } from "../../services/api";
+import { formatBookCategory } from "../../services/catalogs";
+import { formatDateEs } from "../../services/dates";
 
 interface SubjectRecord {
   id: number;
@@ -61,27 +63,11 @@ interface StudentProfile {
 const normalizeSearchValue = (value?: string | null) =>
   (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-const formatCategory = (categoria?: string | null) => {
-  const labels: Record<BookCategory, string> = {
-    INGENIERIA_SISTEMAS: "Ingeniería de Sistemas",
-    INGENIERIA_CIVIL: "Ingeniería Civil",
-    INGENIERIA_INDUSTRIAL: "Ingeniería Industrial",
-    ADMINISTRACION: "Administración",
-    CONTADURIA: "Contaduría",
-    ECONOMIA: "Economía",
-    DERECHO: "Derecho",
-    MEDICINA: "Medicina",
-    ENFERMERIA: "Enfermería",
-    PSICOLOGIA: "Psicología",
-    EDUCACION: "Educación",
-    MATEMATICAS: "Matemáticas",
-  };
-  return labels[categoria as BookCategory] || categoria || "";
-};
+const formatCategory = (categoria?: string | null) => formatBookCategory(categoria) || categoria || "";
 
 const formatDate = (value?: string) => {
   if (!value) return "Sin fecha";
-  return new Date(value).toLocaleDateString("es-ES");
+  return formatDateEs(value);
 };
 
 const getSubjectStudents = (grades: GradeRecord[]) => {
@@ -112,6 +98,7 @@ export const SubjectsPage = () => {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
+  const [careerOptions, setCareerOptions] = useState<string[]>([]);
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [students, setStudents] = useState<UserRecord[]>([]);
   const [grades, setGrades] = useState<GradeRecord[]>([]);
@@ -147,7 +134,7 @@ export const SubjectsPage = () => {
         const isAcademic = isAdmin || user?.rol === "docente";
         const isStudent = user?.rol === "estudiante";
 
-        const [subjectsData, teachersData, usersData, gradesData, myEnrollmentsData, studentProfileData] = await Promise.all([
+        const [subjectsData, teachersData, usersData, gradesData, myEnrollmentsData, studentProfileData, catalogs] = await Promise.all([
           api.getSubjects(),
           isAdmin ? api.getTeachers().catch(() => []) : Promise.resolve([]),
           isAdmin ? api.getUsers().catch(() => []) : Promise.resolve([]),
@@ -158,9 +145,11 @@ export const SubjectsPage = () => {
               : Promise.resolve([]),
           isStudent ? api.getSubjectEnrollmentsByStudent() : Promise.resolve([]),
           isStudent ? api.getStudentSubjectProfile().catch(() => null) : Promise.resolve(null),
+          api.getSystemCatalogs().catch(() => null),
         ]);
 
         setSubjects(subjectsData);
+        setCareerOptions(catalogs?.bookCategories.map((item) => item.value) ?? []);
         setTeachers(teachersData);
         setStudents((usersData as UserRecord[]).filter((item) => item.rol === "estudiante"));
         setGrades(gradesData);
@@ -467,7 +456,7 @@ export const SubjectsPage = () => {
               </SelectTrigger>
               <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
                 <SelectItem value="all" className="dark:text-white dark:focus:bg-gray-700">Todas</SelectItem>
-                {BOOK_CATEGORY_OPTIONS.map((career) => (
+                {careerOptions.map((career) => (
                   <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">
                     {formatCategory(career)}
                   </SelectItem>
@@ -610,7 +599,7 @@ export const SubjectsPage = () => {
                     <SelectValue placeholder="Selecciona una carrera" />
                   </SelectTrigger>
                   <SelectContent className="dark:border-gray-700 dark:bg-gray-800">
-                    {BOOK_CATEGORY_OPTIONS.map((career) => (
+                    {careerOptions.map((career) => (
                       <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">
                         {formatCategory(career)}
                       </SelectItem>
