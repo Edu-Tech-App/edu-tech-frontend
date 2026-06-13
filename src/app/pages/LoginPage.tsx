@@ -11,7 +11,6 @@ export const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const { isDark, toggleTheme } = useTheme();
@@ -171,7 +170,7 @@ export const LoginPage = () => {
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label htmlFor="password" className="text-[13px] font-semibold text-gray-800 dark:text-gray-300">Contraseña</label>
-                <button type="button" className="text-[12px] text-[#6C5CE7] hover:underline dark:text-[#a99df5]">¿Olvidaste tu contraseña?</button>
+                {/* <button type="button" className="text-[12px] text-[#6C5CE7] hover:underline dark:text-[#a99df5]">¿Olvidaste tu contraseña?</button> */}
               </div>
               <div className="relative">
                 <input
@@ -193,7 +192,7 @@ export const LoginPage = () => {
               </div>
             </div>
 
-            {/* Remember me */}
+            {/* Remember me
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
@@ -214,6 +213,7 @@ export const LoginPage = () => {
               </button>
               <span className="text-[13px] text-gray-700 dark:text-gray-400">Recordar mi sesión</span>
             </div>
+            */}
 
             {/* Submit */}
             <button

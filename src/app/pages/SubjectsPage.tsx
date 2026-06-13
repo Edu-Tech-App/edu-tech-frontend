@@ -11,7 +11,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { BookOpen, Eye, GraduationCap, Pencil, Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { BookOpen, GraduationCap, Pencil, Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
 
@@ -555,11 +555,11 @@ export const SubjectsPage = () => {
                                     Ver notas
                                   </Button>
                                 )}
-                                {user?.rol !== "estudiante" && (
-                                  <Button size="sm" variant="ghost" onClick={() => navigate(`/subjects/${subject.id}`)} title="Ver detalle">
-                                    <Eye size={16} />
-                                  </Button>
-                                )}
+                                  {user?.rol !== "estudiante" && (
+                                    <Button size="sm" onClick={() => navigate(`/subjects/${subject.id}`)} title="Gestionar" className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
+                                      Gestionar
+                                    </Button>
+                                  )}
                                 {user?.rol === "administrativo" && (
                                   <>
                                     <Button size="sm" variant="ghost" onClick={() => openSubjectDialog(subject)} title="Editar materia">

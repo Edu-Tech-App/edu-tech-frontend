@@ -11,7 +11,7 @@ import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { BookMarked, CalendarCheck, ChevronLeft, ChevronRight, Edit, Eye, GraduationCap, Plus, Search, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../../services/api";
+import { api, BOOK_CATEGORY_OPTIONS, type BookCategory } from "../../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_OPTIONS = [
@@ -44,6 +44,7 @@ interface UserRecord {
   correoInstitucional: string;
   rol: "estudiante" | "docente" | "bibliotecario" | "administrativo" | "supervisor";
   estado: "activo" | "inactivo";
+  carrera?: string | null;
 }
 
 interface UserDetailData {
@@ -73,6 +74,7 @@ const formatDate = (value?: string) => {
 const toUpperRole = (role: UserRecord["rol"]) => role.toUpperCase() as "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
 const toUpperStatus = (status: UserRecord["estado"]) => status.toUpperCase() as "ACTIVO" | "INACTIVO";
 const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const formatCareer = (value: string) => value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 
 export const UserManagementPage = () => {
   const { user: authUser } = useAuth();
@@ -95,8 +97,8 @@ export const UserManagementPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [detailData, setDetailData] = useState<UserDetailData>({ loans: [], reservations: [], fines: [], grades: [], subjects: [] });
-  const [newUser, setNewUser] = useState({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "" });
-  const [editUser, setEditUser] = useState({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "", estado: "ACTIVO" });
+  const [newUser, setNewUser] = useState({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "", carrera: "" });
+  const [editUser, setEditUser] = useState({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "", estado: "ACTIVO", carrera: "" });
 
   useEffect(() => { void loadUsers(); }, []);
 
@@ -219,12 +221,21 @@ export const UserManagementPage = () => {
       return;
     }
 
+    if (newUser.rol === "ESTUDIANTE" && !newUser.carrera) {
+      toast.error("La carrera es obligatoria para estudiantes");
+      return;
+    }
+
     setSaving(true);
     try {
-      await api.createUser({ ...newUser, rol: newUser.rol });
+      await api.createUser({
+        ...newUser,
+        rol: newUser.rol as "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR",
+        carrera: newUser.rol === "ESTUDIANTE" && newUser.carrera ? (newUser.carrera as BookCategory) : undefined,
+      });
       toast.success(`Usuario ${newUser.nombreCompleto} creado exitosamente`);
       setShowCreateDialog(false);
-      setNewUser({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "" });
+      setNewUser({ nombreCompleto: "", correo: "", documentoIdentidad: "", password: "", rol: "", carrera: "" });
       await loadUsers();
     } catch (error: any) {
       toast.error(error.message || "Error al crear usuario");
@@ -233,17 +244,23 @@ export const UserManagementPage = () => {
     }
   };
 
-  const handleOpenEdit = (user: UserRecord) => {
+  const handleOpenEdit = async (user: UserRecord) => {
     setSelectedUser(user);
-    setEditUser({
-      nombreCompleto: user.nombreCompleto,
-      correo: user.correoInstitucional,
-      documentoIdentidad: "",
-      password: "",
-      rol: toUpperRole(user.rol),
-      estado: toUpperStatus(user.estado),
-    });
-    setShowEditDialog(true);
+    try {
+      const fullUser = await api.getUserById(user.id);
+      setEditUser({
+        nombreCompleto: fullUser.nombreCompleto ?? user.nombreCompleto,
+        correo: fullUser.correoInstitucional ?? user.correoInstitucional,
+        documentoIdentidad: "",
+        password: "",
+        rol: toUpperRole(user.rol),
+        estado: toUpperStatus(user.estado),
+        carrera: fullUser.carrera ?? "",
+      });
+      setShowEditDialog(true);
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo cargar el usuario");
+    }
   };
 
   const handleUpdateUser = async () => {
@@ -260,6 +277,7 @@ export const UserManagementPage = () => {
         documentoIdentidad: editUser.documentoIdentidad || undefined,
         password: editUser.password || undefined,
         rol: editUser.rol as "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR",
+        carrera: editUser.rol === "ESTUDIANTE" && editUser.carrera ? (editUser.carrera as BookCategory) : undefined,
       });
       await api.updateUserStatus(selectedUser.id, editUser.estado);
       toast.success("Usuario actualizado exitosamente");
@@ -384,7 +402,7 @@ export const UserManagementPage = () => {
                               <div className="flex justify-end gap-1">
                                 <Button size="sm" variant="ghost" onClick={() => void loadUserDetails(user)}><Eye size={16} /></Button>
                                 {authUser?.rol === "administrativo" && (
-                                  <Button size="sm" variant="ghost" onClick={() => handleOpenEdit(user)}><Edit size={16} /></Button>
+                                  <Button size="sm" variant="ghost" onClick={() => void handleOpenEdit(user)}><Edit size={16} /></Button>
                                 )}
                               </div>
                             </td>
@@ -425,13 +443,25 @@ export const UserManagementPage = () => {
                 <div><Label className="dark:text-gray-300">Contraseña</Label><Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" /></div>
                 <div>
                   <Label className="dark:text-gray-300">Rol</Label>
-                  <Select value={newUser.rol} onValueChange={(value) => setNewUser({ ...newUser, rol: value })}>
+                  <Select value={newUser.rol} onValueChange={(value) => setNewUser({ ...newUser, rol: value, carrera: value === "ESTUDIANTE" ? newUser.carrera : "" })}>
                     <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                     <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                       {ROLE_OPTIONS.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
+                {newUser.rol === "ESTUDIANTE" && (
+                  <div>
+                    <Label className="dark:text-gray-300">Carrera</Label>
+                    <Select value={newUser.carrera} onValueChange={(value) => setNewUser({ ...newUser, carrera: value })}>
+                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona una carrera" /></SelectTrigger>
+                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                        {BOOK_CATEGORY_OPTIONS.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-rose-500 dark:text-rose-300">Obligatoria para estudiantes.</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
@@ -454,13 +484,24 @@ export const UserManagementPage = () => {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <Label className="dark:text-gray-300">Cambiar rol</Label>
-                    <Select value={editUser.rol} onValueChange={(value) => setEditUser({ ...editUser, rol: value })}>
+                    <Select value={editUser.rol} onValueChange={(value) => setEditUser({ ...editUser, rol: value, carrera: value === "ESTUDIANTE" ? editUser.carrera : "" })}>
                       <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue /></SelectTrigger>
                       <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                         {ROLE_OPTIONS.map((role) => <SelectItem key={role.value} value={role.value} className="dark:text-white dark:focus:bg-gray-700">{role.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
+                  {editUser.rol === "ESTUDIANTE" && (
+                    <div>
+                      <Label className="dark:text-gray-300">Carrera</Label>
+                      <Select value={editUser.carrera} onValueChange={(value) => setEditUser({ ...editUser, carrera: value })}>
+                        <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"><SelectValue placeholder="Selecciona una carrera" /></SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                          {BOOK_CATEGORY_OPTIONS.map((career) => <SelectItem key={career} value={career} className="dark:text-white dark:focus:bg-gray-700">{formatCareer(career)}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div>
                     <Label className="dark:text-gray-300">Estado del usuario</Label>
                     <Select value={editUser.estado} onValueChange={(value) => setEditUser({ ...editUser, estado: value })}>

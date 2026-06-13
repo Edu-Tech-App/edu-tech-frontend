@@ -7,174 +7,232 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Input } from "../components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { ArrowLeft, Download, FileUp, Plus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { api, API_URL_PUBLIC } from "../../services/api";
+import { api } from "../../services/api";
 
 interface SubjectRecord {
-  id: number; codigo: string; nombre: string; docenteId: number;
+  id: number;
+  codigo: string;
+  nombre: string;
+  docenteId: number;
   docente?: { user?: { nombreCompleto: string } };
 }
+
 interface GradeRecord {
-  id: number; periodoAcademico: string; valor: number; fechaRegistro: string;
-  estudianteId: number; asignaturaId: number;
+  id: number;
+  periodoAcademico: string;
+  valor: number;
+  fechaRegistro: string;
+  estudianteId: number;
+  asignaturaId: number;
   estudiante?: { codigoEstudiantil?: string; user?: { nombreCompleto: string } };
   asignatura?: { nombre: string; codigo: string };
 }
 
-interface SubjectTask {
+interface EnrollmentRecord {
   id: number;
-  titulo: string;
-  descripcion: string;
-  archivoUrl?: string | null;
-  creadoEn: string;
-  entregasRealizadas?: number;
-  entregasPendientes?: number;
-  estadoEntrega?: "PENDIENTE" | "ENTREGADA";
-  miEntrega?: {
-    id: number;
-    mensaje?: string | null;
-    archivoUrl?: string | null;
-    entregadoEn: string;
-  } | null;
+  estudianteId: number;
+  estudiante?: {
+    codigoEstudiantil?: string;
+    user?: { nombreCompleto: string };
+  };
 }
+
+type GradeSlotKey = "corte1" | "corte2" | "corte3";
+
+const GRADE_SLOTS: Array<{ key: GradeSlotKey; label: string; period: string; weight: number }> = [
+  { key: "corte1", label: "Nota 1", period: "CORTE1", weight: 0.3 },
+  { key: "corte2", label: "Nota 2", period: "CORTE2", weight: 0.3 },
+  { key: "corte3", label: "Nota 3", period: "CORTE3", weight: 0.4 },
+];
+
+const normalizePeriod = (value?: string) => String(value || "").toUpperCase().replace(/[\s_-]/g, "");
+
+const getSlotFromGrade = (grade?: GradeRecord | null) => {
+  const period = normalizePeriod(grade?.periodoAcademico);
+  if (period === "CORTE1") return "corte1";
+  if (period === "CORTE2") return "corte2";
+  if (period === "CORTE3") return "corte3";
+  return null;
+};
 
 export const SubjectDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showTaskDialog, setShowTaskDialog] = useState(false);
-  const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
-  const [selectedGrade, setSelectedGrade] = useState<GradeRecord | null>(null);
-  const [selectedTask, setSelectedTask] = useState<SubjectTask | null>(null);
-  const [newGrade, setNewGrade] = useState("");
-  const [tasks, setTasks] = useState<SubjectTask[]>([]);
   const [subject, setSubject] = useState<SubjectRecord | null>(null);
   const [grades, setGrades] = useState<GradeRecord[]>([]);
+  const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingTask, setSavingTask] = useState(false);
-  const [submittingTask, setSubmittingTask] = useState(false);
-  const [taskForm, setTaskForm] = useState({ titulo: "", descripcion: "", file: null as File | null });
-  const [submissionForm, setSubmissionForm] = useState({ mensaje: "", file: null as File | null });
+  const [savingStudentId, setSavingStudentId] = useState<number | null>(null);
+  const [gradeDrafts, setGradeDrafts] = useState<Record<number, Record<GradeSlotKey, string>>>({});
 
-  const loadTasks = async (subjectId: number) => {
-    const tasksData = await api.getSubjectTasks(subjectId);
-    setTasks(Array.isArray(tasksData) ? tasksData : []);
+  const loadTeacherData = async (subjectId: number) => {
+    const [gradesData, enrollmentsData] = await Promise.all([
+      api.getGrades({ asignatura: subjectId }),
+      api.getSubjectEnrollments(subjectId),
+    ]);
+    setGrades(Array.isArray(gradesData) ? gradesData : []);
+    setEnrollments(Array.isArray(enrollmentsData) ? enrollmentsData : []);
+  };
+
+  const loadStudentData = async (subjectId: number, studentId: number) => {
+    const gradesData = await api.getStudentGrades(studentId);
+    setGrades((Array.isArray(gradesData) ? gradesData : []).filter((grade: GradeRecord) => grade.asignaturaId === subjectId));
   };
 
   useEffect(() => {
     const loadData = async () => {
-      if (!id) { toast.error("No se encontró la materia"); navigate("/subjects"); return; }
+      if (!id) {
+        toast.error("No se encontró la materia");
+        navigate("/subjects");
+        return;
+      }
+
       try {
         setLoading(true);
         const subjectData = await api.getSubjectById(Number(id));
         setSubject(subjectData);
-        await loadTasks(Number(id));
+
         if (user?.rol === "estudiante") {
-          const gradesData = await api.getStudentGrades(user.id);
-          setGrades(gradesData.filter((g: GradeRecord) => g.asignaturaId === Number(id)));
+          await loadStudentData(Number(id), user.id);
         } else {
-          const gradesData = await api.getGrades({ asignatura: Number(id) });
-          setGrades(gradesData);
+          await loadTeacherData(Number(id));
         }
       } catch (error: any) {
         toast.error(error.message || "No se pudo cargar la materia");
         navigate("/subjects");
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     };
+
     void loadData();
   }, [id, navigate, user]);
 
-  const groupedTeacherGrades = useMemo(() => {
-    const grouped = new Map<number, { id: number; name: string; studentId: string; average: string; latestGradeId: number }>();
-    grades.forEach((grade) => {
-      const studentId = grade.estudianteId;
-      if (!grouped.has(studentId)) {
-        grouped.set(studentId, {
-          id: studentId,
-          name: grade.estudiante?.user?.nombreCompleto || `Estudiante ${studentId}`,
-          studentId: grade.estudiante?.codigoEstudiantil || `EST-${studentId}`,
-          average: grade.valor.toFixed(2),
-          latestGradeId: grade.id,
-        });
-      }
+  const teacherRows = useMemo(() => {
+    return enrollments.map((enrollment) => {
+      const studentGrades = grades.filter((grade) => grade.estudianteId === enrollment.estudianteId);
+      const bySlot = {
+        corte1: studentGrades.find((grade) => getSlotFromGrade(grade) === "corte1") ?? null,
+        corte2: studentGrades.find((grade) => getSlotFromGrade(grade) === "corte2") ?? null,
+        corte3: studentGrades.find((grade) => getSlotFromGrade(grade) === "corte3") ?? null,
+      };
+
+      const effectiveValues = {
+        corte1: gradeDrafts[enrollment.estudianteId]?.corte1 ?? (bySlot.corte1 ? String(Number(bySlot.corte1.valor)) : ""),
+        corte2: gradeDrafts[enrollment.estudianteId]?.corte2 ?? (bySlot.corte2 ? String(Number(bySlot.corte2.valor)) : ""),
+        corte3: gradeDrafts[enrollment.estudianteId]?.corte3 ?? (bySlot.corte3 ? String(Number(bySlot.corte3.valor)) : ""),
+      };
+
+      const finalGrade = GRADE_SLOTS.reduce((sum, slot) => {
+        const numeric = Number(effectiveValues[slot.key] || 0);
+        return sum + numeric * slot.weight;
+      }, 0);
+
+      return {
+        id: enrollment.estudianteId,
+        nombre: enrollment.estudiante?.user?.nombreCompleto || `Estudiante ${enrollment.estudianteId}`,
+        codigo: enrollment.estudiante?.codigoEstudiantil || `EST-${enrollment.estudianteId}`,
+        gradesBySlot: bySlot,
+        effectiveValues,
+        finalGrade,
+      };
     });
-    return Array.from(grouped.values());
+  }, [enrollments, gradeDrafts, grades]);
+
+  const studentSummary = useMemo(() => {
+    const gradesBySlot = {
+      corte1: grades.find((grade) => getSlotFromGrade(grade) === "corte1") ?? null,
+      corte2: grades.find((grade) => getSlotFromGrade(grade) === "corte2") ?? null,
+      corte3: grades.find((grade) => getSlotFromGrade(grade) === "corte3") ?? null,
+    };
+
+    const finalGrade = GRADE_SLOTS.reduce((sum, slot) => {
+      const grade = gradesBySlot[slot.key];
+      return sum + Number(grade?.valor || 0) * slot.weight;
+    }, 0);
+
+    return { gradesBySlot, finalGrade };
   }, [grades]);
 
-  const currentAverage = useMemo(() => {
-    if (grades.length === 0) return "Sin notas";
-    const total = grades.reduce((sum, g) => sum + Number(g.valor), 0);
-    return (total / grades.length).toFixed(2);
-  }, [grades]);
-
-  const handleEditGrade = (grade: GradeRecord) => {
-    setSelectedGrade(grade); setNewGrade(String(grade.valor)); setShowEditDialog(true);
+  const handleDraftChange = (studentId: number, key: GradeSlotKey, value: string) => {
+    setGradeDrafts((current) => ({
+      ...current,
+      [studentId]: {
+        corte1: current[studentId]?.corte1 ?? "",
+        corte2: current[studentId]?.corte2 ?? "",
+        corte3: current[studentId]?.corte3 ?? "",
+        [key]: value,
+      },
+    }));
   };
 
-  const confirmEditGrade = async () => {
-    if (!selectedGrade) return;
-    try {
-      await api.updateGrade(selectedGrade.id, Number(newGrade));
-      toast.success("Calificación actualizada exitosamente");
-      setShowEditDialog(false); setSelectedGrade(null); setNewGrade("");
-      const gradesData = await api.getGrades({ asignatura: Number(id) });
-      setGrades(gradesData);
-    } catch (error: any) {
-      toast.error(error.message || "No se pudo actualizar la calificación");
-    }
-  };
+  const handleSaveStudentGrades = async (studentId: number) => {
+    if (!id) return;
 
-  const handleCreateTask = async () => {
-    if (!id || !taskForm.titulo || !taskForm.descripcion) {
-      toast.error("Completa título y descripción");
+    const row = teacherRows.find((item) => item.id === studentId);
+    if (!row) return;
+
+    const filledSlots = GRADE_SLOTS.filter((slot) => row.effectiveValues[slot.key] !== "");
+    if (filledSlots.length === 0) {
+      toast.error("Ingresa al menos una nota para guardar");
       return;
     }
 
-    try {
-      setSavingTask(true);
-      await api.createSubjectTask(Number(id), taskForm);
-      toast.success("Tarea creada exitosamente");
-      setShowTaskDialog(false);
-      setTaskForm({ titulo: "", descripcion: "", file: null });
-      await loadTasks(Number(id));
-    } catch (error: any) {
-      toast.error(error.message || "No se pudo crear la tarea");
-    } finally {
-      setSavingTask(false);
-    }
-  };
+    for (const slot of GRADE_SLOTS) {
+      const rawValue = row.effectiveValues[slot.key];
+      if (!rawValue) continue;
 
-  const handleSubmitTask = async () => {
-    if (!selectedTask) return;
-
-    try {
-      setSubmittingTask(true);
-      await api.submitSubjectTask(selectedTask.id, submissionForm);
-      toast.success("Tarea subida correctamente");
-      setShowSubmissionDialog(false);
-      setSelectedTask(null);
-      setSubmissionForm({ mensaje: "", file: null });
-      if (id) {
-        await loadTasks(Number(id));
+      const numeric = Number(rawValue);
+      if (Number.isNaN(numeric) || numeric < 0 || numeric > 5) {
+        toast.error(`${slot.label} debe estar entre 0.0 y 5.0`);
+        return;
       }
+    }
+
+    try {
+      setSavingStudentId(studentId);
+
+      for (const slot of filledSlots) {
+        const numeric = Number(row.effectiveValues[slot.key]);
+        const existingGrade = row.gradesBySlot[slot.key];
+
+        if (existingGrade) {
+          await api.updateGrade(existingGrade.id, numeric);
+        } else {
+          await api.createGrade({
+            estudianteId: studentId,
+            asignaturaId: Number(id),
+            periodoAcademico: slot.period,
+            valor: numeric,
+          });
+        }
+      }
+
+      toast.success("Notas guardadas correctamente");
+      await loadTeacherData(Number(id));
+      setGradeDrafts((current) => {
+        const next = { ...current };
+        delete next[studentId];
+        return next;
+      });
     } catch (error: any) {
-      toast.error(error.message || "No se pudo subir la tarea");
+      toast.error(error.message || "No se pudieron guardar las notas");
     } finally {
-      setSubmittingTask(false);
+      setSavingStudentId(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
+      <div className="min-h-screen bg-gray-50 transition-colors dark:bg-[#202445]">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-        <main className="lg:ml-64 pt-16 p-6">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <main className="p-6 pt-16 lg:ml-64">
+          <Card className="dark:border-gray-700 dark:bg-gray-800">
             <CardContent className="p-6 text-gray-500 dark:text-gray-400">Cargando materia...</CardContent>
           </Card>
         </main>
@@ -185,254 +243,127 @@ export const SubjectDetailPage = () => {
   if (!subject) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#202445] transition-colors">
+    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-[#202445]">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <TopBar onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
-      <main className="lg:ml-64 pt-16 p-6">
+      <main className="p-6 pt-16 lg:ml-64">
         <Button variant="ghost" onClick={() => navigate("/subjects")} className="mb-4 dark:text-gray-300 dark:hover:bg-gray-800">
           <ArrowLeft size={16} className="mr-2" />Volver a Materias
         </Button>
 
-        <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
+        <Card className="mb-6 dark:border-gray-700 dark:bg-gray-800">
           <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-2xl dark:text-white">{subject.nombre}</CardTitle>
-                <p className="text-gray-600 dark:text-gray-400">{subject.codigo}</p>
-              </div>
-              {(user?.rol === "docente" || user?.rol === "administrativo") && (
-                <Button onClick={() => setShowTaskDialog(true)} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-                  <Plus size={16} className="mr-2" />Nueva tarea
-                </Button>
-              )}
-            </div>
+            <CardTitle className="text-2xl dark:text-white">{subject.nombre}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">Consulta la información y el seguimiento académico de esta materia.</p>
+            <p className="mb-2 text-gray-700 dark:text-gray-300">Consulta la información y el seguimiento académico de esta materia.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Código: {subject.codigo}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">Profesor: {subject.docente?.user?.nombreCompleto || "Docente no asignado"}</p>
           </CardContent>
         </Card>
 
         {user?.rol === "estudiante" ? (
           <div className="space-y-6">
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="dark:text-white">Mis Tareas</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {tasks.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">No hay tareas asignadas para esta materia.</p>
-                ) : (
-                  tasks.map((task) => (
-                    <div key={task.id} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-900/30">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-1">
-                          <p className="font-semibold text-gray-800 dark:text-white">{task.titulo}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{task.descripcion}</p>
-                          <p className="text-xs text-gray-500 dark:text-[#B7BDD6]">Creada: {new Date(task.creadoEn).toLocaleDateString()}</p>
-                          {task.miEntrega?.mensaje && (
-                            <p className="text-xs text-[#6C5CE7] dark:text-[#d9d4ff]">Tu mensaje: {task.miEntrega.mensaje}</p>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${task.estadoEntrega === "ENTREGADA" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"}`}>
-                            {task.estadoEntrega === "ENTREGADA" ? "Entregada" : "Pendiente"}
-                          </span>
-                          {task.archivoUrl && (
-                            <Button variant="outline" size="sm" asChild className="dark:border-gray-600 dark:text-gray-300">
-                              <a href={`${API_URL_PUBLIC}${task.archivoUrl}`} target="_blank" rel="noreferrer">
-                                <Download size={14} className="mr-2" />Archivo
-                              </a>
-                            </Button>
-                          )}
-                          {task.miEntrega?.archivoUrl && (
-                            <Button variant="outline" size="sm" asChild className="dark:border-gray-600 dark:text-gray-300">
-                              <a href={`${API_URL_PUBLIC}${task.miEntrega.archivoUrl}`} target="_blank" rel="noreferrer">
-                                <Download size={14} className="mr-2" />Mi entrega
-                              </a>
-                            </Button>
-                          )}
-                          <Button size="sm" onClick={() => { setSelectedTask(task); setShowSubmissionDialog(true); }} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">
-                            <FileUp size={14} className="mr-2" />{task.estadoEntrega === "ENTREGADA" ? "Actualizar entrega" : "Subir tarea"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="dark:text-white">Mis Calificaciones</CardTitle></CardHeader>
+            <Card className="dark:border-gray-700 dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="dark:text-white">Mis Notas</CardTitle>
+              </CardHeader>
               <CardContent>
                 <div className="mb-4 rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-3 dark:border-[#6C5CE7]/35 dark:bg-[#6C5CE7]/20">
-                  <p className="text-sm text-[#5b4bd1] dark:text-[#d9d4ff]">Las notas se califican en escala de 0.0 a 5.0</p>
+                  <p className="text-sm text-[#5b4bd1] dark:text-[#d9d4ff]">Ponderación: Nota 1 = 30%, Nota 2 = 30%, Nota 3 = 40%</p>
                 </div>
                 <Table>
                   <TableHeader>
                     <TableRow className="dark:border-gray-700">
-                      <TableHead className="dark:text-gray-300">Periodo</TableHead>
-                      <TableHead className="dark:text-gray-300">Calificación</TableHead>
-                      <TableHead className="dark:text-gray-300">Fecha</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 1</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 2</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 3</TableHead>
+                      <TableHead className="dark:text-gray-300">Definitiva</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {grades.length === 0 ? (
-                      <TableRow><TableCell colSpan={3} className="text-center py-6 text-gray-500 dark:text-gray-400">No hay calificaciones registradas.</TableCell></TableRow>
-                    ) : grades.map((grade) => (
-                      <TableRow key={grade.id} className="dark:border-gray-700">
-                        <TableCell className="font-medium dark:text-white">{grade.periodoAcademico}</TableCell>
-                        <TableCell><span className="font-bold text-[#6C5CE7]">{Number(grade.valor).toFixed(2)}</span></TableCell>
-                        <TableCell className="dark:text-gray-400">{new Date(grade.fechaRegistro).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow className="dark:border-gray-700">
+                      {GRADE_SLOTS.map((slot) => (
+                        <TableCell key={slot.key} className="font-medium dark:text-white">
+                          {studentSummary.gradesBySlot[slot.key] ? Number(studentSummary.gradesBySlot[slot.key]?.valor).toFixed(2) : "-"}
+                        </TableCell>
+                      ))}
+                      <TableCell className="font-bold text-[#6C5CE7]">
+                        {grades.length === 0 ? "Sin notas" : studentSummary.finalGrade.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
-                <div className="mt-6 rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-4 dark:border-[#6C5CE7]/35 dark:bg-[#6C5CE7]/20">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Promedio Actual</p>
-                  <p className="text-3xl font-bold text-[#6C5CE7]">{currentAverage}</p>
-                </div>
               </CardContent>
             </Card>
           </div>
         ) : (
           <div className="space-y-6">
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="dark:text-white">Tareas asignadas</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {tasks.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">Aún no hay tareas creadas para esta materia.</p>
-                ) : (
-                  tasks.map((task) => (
-                    <div key={task.id} className="rounded-lg border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-900/30">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-800 dark:text-white">{task.titulo}</p>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{task.descripcion}</p>
-                          <p className="mt-1 text-xs text-gray-500 dark:text-[#B7BDD6]">Creada: {new Date(task.creadoEn).toLocaleDateString()}</p>
-                        </div>
-                        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                          <p>Entregadas: <span className="font-semibold text-emerald-600">{task.entregasRealizadas ?? 0}</span></p>
-                          <p>Pendientes: <span className="font-semibold text-amber-600">{task.entregasPendientes ?? 0}</span></p>
-                          {task.archivoUrl && (
-                            <Button variant="outline" size="sm" asChild className="dark:border-gray-600 dark:text-gray-300">
-                              <a href={`${API_URL_PUBLIC}${task.archivoUrl}`} target="_blank" rel="noreferrer">
-                                <Download size={14} className="mr-2" />Adjunto
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader><CardTitle className="dark:text-white">Calificaciones de Estudiantes</CardTitle></CardHeader>
+            <Card className="dark:border-gray-700 dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="dark:text-white">Calificaciones de Estudiantes</CardTitle>
+              </CardHeader>
               <CardContent>
+                <div className="mb-4 rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-3 dark:border-[#6C5CE7]/35 dark:bg-[#6C5CE7]/20">
+                  <p className="text-sm text-[#5b4bd1] dark:text-[#d9d4ff]">Ingresa las 3 notas del estudiante. La ponderación final es 30%, 30% y 40%.</p>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow className="dark:border-gray-700">
-                      <TableHead className="dark:text-gray-300">Nombre del Estudiante</TableHead>
-                      <TableHead className="dark:text-gray-300">ID Estudiante</TableHead>
-                      <TableHead className="dark:text-gray-300">Última Nota</TableHead>
-                      <TableHead className="dark:text-gray-300">Promedio</TableHead>
-                      <TableHead className="dark:text-gray-300">Acciones</TableHead>
+                      <TableHead className="dark:text-gray-300">Estudiante</TableHead>
+                      <TableHead className="dark:text-gray-300">Código</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 1</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 2</TableHead>
+                      <TableHead className="dark:text-gray-300">Nota 3</TableHead>
+                      <TableHead className="dark:text-gray-300">Definitiva</TableHead>
+                      <TableHead className="dark:text-gray-300">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {groupedTeacherGrades.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-6 text-gray-500 dark:text-gray-400">No hay calificaciones registradas.</TableCell></TableRow>
-                    ) : groupedTeacherGrades.map((student) => (
-                      <TableRow key={student.id} className="dark:border-gray-700">
-                        <TableCell className="font-medium dark:text-white">{student.name}</TableCell>
-                        <TableCell className="dark:text-gray-400">{student.studentId}</TableCell>
-                        <TableCell className="dark:text-gray-400">{student.average}</TableCell>
-                        <TableCell className="font-bold text-[#6C5CE7]">{student.average}</TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700" onClick={() => {
-                            const grade = grades.find((g) => g.id === student.latestGradeId);
-                            if (grade) handleEditGrade(grade);
-                          }}>Editar Nota</Button>
+                    {teacherRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-6 text-center text-gray-500 dark:text-gray-400">
+                          No hay estudiantes inscritos en esta materia.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      teacherRows.map((student) => (
+                        <TableRow key={student.id} className="dark:border-gray-700">
+                          <TableCell className="font-medium dark:text-white">{student.nombre}</TableCell>
+                          <TableCell className="dark:text-gray-400">{student.codigo}</TableCell>
+                          {GRADE_SLOTS.map((slot) => (
+                            <TableCell key={slot.key}>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="5"
+                                step="0.1"
+                                value={student.effectiveValues[slot.key]}
+                                onChange={(e) => handleDraftChange(student.id, slot.key, e.target.value)}
+                                className="h-9 min-w-[88px] dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                              />
+                            </TableCell>
+                          ))}
+                          <TableCell className="font-bold text-[#6C5CE7]">{student.finalGrade.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              onClick={() => void handleSaveStudentGrades(student.id)}
+                              disabled={savingStudentId === student.id}
+                              className="bg-[#6C5CE7] hover:bg-[#5b4bd1]"
+                            >
+                              {savingStudentId === student.id ? "Guardando..." : "Guardar"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </div>
         )}
-
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="dark:text-white">Editar Calificación</DialogTitle>
-              <DialogDescription className="dark:text-gray-400">Actualizar calificación para {selectedGrade?.estudiante?.user?.nombreCompleto || "estudiante"}</DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block dark:text-gray-300">Nueva nota (0.0 - 5.0)</label>
-                <Input placeholder="Ejemplo: 4.5" value={newGrade} onChange={(e) => setNewGrade(e.target.value)} type="number" min="0" max="5" step="0.1" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={confirmEditGrade} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">Guardar Nota</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
-          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="dark:text-white">Nueva tarea</DialogTitle>
-              <DialogDescription className="dark:text-gray-400">Crea una tarea para los estudiantes inscritos en esta materia.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium dark:text-gray-300">Título</label>
-                <Input value={taskForm.titulo} onChange={(e) => setTaskForm({ ...taskForm, titulo: e.target.value })} className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium dark:text-gray-300">Descripción</label>
-                <textarea value={taskForm.descripcion} onChange={(e) => setTaskForm({ ...taskForm, descripcion: e.target.value })} className="min-h-[120px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium dark:text-gray-300">Archivo</label>
-                <Input type="file" onChange={(e) => setTaskForm({ ...taskForm, file: e.target.files?.[0] || null })} className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowTaskDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleCreateTask} disabled={savingTask} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{savingTask ? "Guardando..." : "Crear tarea"}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showSubmissionDialog} onOpenChange={setShowSubmissionDialog}>
-          <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="dark:text-white">Subir tarea</DialogTitle>
-              <DialogDescription className="dark:text-gray-400">Entrega tu archivo o deja un mensaje para "{selectedTask?.titulo}".</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium dark:text-gray-300">Mensaje</label>
-                <textarea value={submissionForm.mensaje} onChange={(e) => setSubmissionForm({ ...submissionForm, mensaje: e.target.value })} className="min-h-[110px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium dark:text-gray-300">Archivo</label>
-                <Input type="file" onChange={(e) => setSubmissionForm({ ...submissionForm, file: e.target.files?.[0] || null })} className="dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSubmissionDialog(false)} className="dark:border-gray-600 dark:text-gray-300">Cancelar</Button>
-              <Button onClick={handleSubmitTask} disabled={submittingTask} className="bg-[#6C5CE7] hover:bg-[#5b4bd1]">{submittingTask ? "Subiendo..." : "Enviar tarea"}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </main>
     </div>
   );

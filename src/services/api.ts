@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const viteEnv = (import.meta as ImportMeta & { env: { VITE_API_URL?: string } }).env;
+const API_URL = viteEnv.VITE_API_URL || "http://localhost:3000";
 
 export const BOOK_CATEGORY_OPTIONS = [
   "INGENIERIA_SISTEMAS",
@@ -85,6 +86,15 @@ export const api = {
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al obtener usuarios"));
+    }
+  },
+
+  getUserById: async (id: number) => {
+    try {
+      const response = await apiClient.get(`/users/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al obtener el usuario"));
     }
   },
 
@@ -531,6 +541,20 @@ export const api = {
     }
   },
 
+  createGrade: async (data: {
+    estudianteId: number;
+    asignaturaId: number;
+    periodoAcademico: string;
+    valor: number;
+  }) => {
+    try {
+      const response = await apiClient.post("/grades", data);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error, "Error al crear la calificación"));
+    }
+  },
+
   updateGrade: async (id: number, valor: number) => {
     try {
       const response = await apiClient.put(`/grades/${id}`, { valor });
@@ -540,7 +564,14 @@ export const api = {
     }
   },
 
-  createUser: async (data: unknown) => {
+  createUser: async (data: {
+    nombreCompleto: string;
+    correo: string;
+    documentoIdentidad: string;
+    password: string;
+    rol: "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
+    carrera?: BookCategory;
+  }) => {
     try {
       const response = await apiClient.post("/users", data);
       return response.data;
@@ -551,13 +582,14 @@ export const api = {
 
   updateUser: async (
     id: number,
-    data: {
-      nombreCompleto?: string;
-      documentoIdentidad?: string;
-      correo?: string;
-      password?: string;
-      rol?: "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
-    },
+      data: {
+        nombreCompleto?: string;
+        documentoIdentidad?: string;
+        correo?: string;
+        password?: string;
+        rol?: "ESTUDIANTE" | "DOCENTE" | "BIBLIOTECARIO" | "ADMINISTRATIVO" | "SUPERVISOR";
+        carrera?: BookCategory;
+      },
   ) => {
     try {
       const response = await apiClient.put(`/users/${id}`, data);
@@ -668,4 +700,3 @@ export const api = {
     }
   },
 };
-
