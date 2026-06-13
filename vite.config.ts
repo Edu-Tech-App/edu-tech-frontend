@@ -29,4 +29,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src/app'),
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+    css: true,
+  },
 })
