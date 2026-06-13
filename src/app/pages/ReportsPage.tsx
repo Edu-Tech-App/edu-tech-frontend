@@ -74,6 +74,14 @@ const formatDate = (value?: string | null) => {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
+const getCutLabel = (period?: string) => {
+  const normalized = String(period || "").toUpperCase().replace(/[\s_-]/g, "");
+  if (normalized.includes("CORTE1")) return "Corte 1";
+  if (normalized.includes("CORTE2")) return "Corte 2";
+  if (normalized.includes("CORTE3")) return "Corte 3";
+  return "General";
+};
+
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -144,6 +152,11 @@ export const ReportsPage = () => {
   const [fines, setFines] = useState<FineRecord[]>([]);
   const [reservations, setReservations] = useState<RoomReservationRecord[]>([]);
   const [grades, setGrades] = useState<GradeRecord[]>([]);
+
+  const selectedUser = useMemo(
+    () => (userFilter === "all" ? null : users.find((item) => String(item.id) === userFilter) || null),
+    [userFilter, users],
+  );
 
   useEffect(() => {
     if (user) {
@@ -221,30 +234,26 @@ export const ReportsPage = () => {
     return fines.filter((fine) => {
       const fineUser = fine.prestamo?.estudiante?.user;
       const matchesRole = roleFilter === "all" || users.find((item) => item.id === fineUser?.id)?.rol === roleFilter;
-      const matchesUser = userFilter === "all" || String(fineUser?.id) === userFilter;
       return (
         withinRange(fine.fechaGeneracion) &&
         matchesRole &&
-        matchesUser &&
         matchesSearch([fine.prestamo?.libro?.titulo, fineUser?.nombreCompleto, fineUser?.correoInstitucional, fine.estado])
       );
     });
-  }, [fines, roleFilter, userFilter, searchTerm, startDate, endDate, users]);
+  }, [fines, roleFilter, searchTerm, startDate, endDate, users]);
 
   const filteredReservations = useMemo(() => {
     return reservations.filter((reservation) => {
       const resUser = reservation.estudiante?.user || reservation.docente?.user;
       const userRole = users.find((item) => item.id === resUser?.id)?.rol;
       const matchesRole = roleFilter === "all" || userRole === roleFilter;
-      const matchesUser = userFilter === "all" || String(resUser?.id) === userFilter;
       return (
         withinRange(reservation.fechaReserva) &&
         matchesRole &&
-        matchesUser &&
         matchesSearch([reservation.sala?.nombre, resUser?.nombreCompleto, reservation.estado])
       );
     });
-  }, [reservations, roleFilter, userFilter, searchTerm, startDate, endDate, users]);
+  }, [reservations, roleFilter, searchTerm, startDate, endDate, users]);
 
   const filteredGrades = useMemo(() => {
     return grades.filter((grade) => {
@@ -263,6 +272,28 @@ export const ReportsPage = () => {
       );
     });
   }, [academicPeriod, grades, roleFilter, searchTerm, startDate, endDate, subjectFilter, userFilter, users]);
+
+  const academicDetailBySubject = useMemo(() => {
+    if (!selectedUser || filteredGrades.length === 0) return [];
+
+    const grouped = new Map<number, { subjectName: string; rows: Array<{ period: string; cut: string; grade: string; date: string }> }>();
+
+    filteredGrades.forEach((grade) => {
+      const subjectName = subjects.find((subject) => subject.id === grade.asignaturaId)?.nombre || "Materia";
+      if (!grouped.has(grade.asignaturaId)) {
+        grouped.set(grade.asignaturaId, { subjectName, rows: [] });
+      }
+
+      grouped.get(grade.asignaturaId)?.rows.push({
+        period: grade.periodoAcademico,
+        cut: getCutLabel(grade.periodoAcademico),
+        grade: Number(grade.valor).toFixed(2),
+        date: formatDate(grade.fechaRegistro),
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [filteredGrades, selectedUser, subjects]);
 
   const metrics = useMemo(() => {
     const multasPendientes = filteredFines.filter((fine) => fine.estado === "PENDIENTE").reduce((sum, fine) => sum + Number(fine.monto), 0);
@@ -591,15 +622,39 @@ export const ReportsPage = () => {
                               </Button>
                             </div>
                           </div>
+                          {selectedUser && (
+                            <div className="mb-4 rounded-lg border border-[#6C5CE7]/20 bg-[#6C5CE7]/8 p-3 dark:border-[#6C5CE7]/35 dark:bg-[#6C5CE7]/20">
+                              <p className="text-sm font-medium text-[#5b4bd1] dark:text-[#d9d4ff]">
+                                Reporte detallado de {selectedUser.nombreCompleto}
+                              </p>
+                              <p className="mt-1 text-xs text-gray-600 dark:text-[#D9DDF2]">
+                                La vista desglosa las calificaciones por materia, período y corte.
+                              </p>
+                            </div>
+                          )}
                           <div className="space-y-3">
                             {filteredGrades.length === 0 ? (
                               <p className="text-gray-500">No hay notas para los filtros seleccionados.</p>
+                            ) : selectedUser ? (
+                              academicDetailBySubject.map((group) => (
+                                <div key={group.subjectName} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+                                  <p className="font-medium text-gray-700 dark:text-white">{group.subjectName}</p>
+                                  <div className="mt-3 space-y-2">
+                                    {group.rows.map((row, index) => (
+                                      <div key={`${group.subjectName}-${row.period}-${row.cut}-${index}`} className="flex flex-col gap-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800/60">
+                                        <p className="font-medium text-gray-700 dark:text-white">{row.period} · {row.cut}</p>
+                                        <p className="text-gray-500 dark:text-[#B7BDD6]">Nota {row.grade} · Registrada {row.date}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))
                             ) : (
                               filteredGrades.slice(0, 8).map((grade) => (
                                 <div key={grade.id} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
                                   <p className="font-medium text-gray-700 dark:text-white">{users.find((u) => u.id === grade.estudianteId)?.nombreCompleto || "Estudiante"}</p>
                                   <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">
-                                    {subjects.find((s) => s.id === grade.asignaturaId)?.nombre || "Materia"} · {grade.periodoAcademico} · Nota {Number(grade.valor).toFixed(1)}
+                                    {subjects.find((s) => s.id === grade.asignaturaId)?.nombre || "Materia"} · {grade.periodoAcademico} · {getCutLabel(grade.periodoAcademico)} · Nota {Number(grade.valor).toFixed(1)}
                                   </p>
                                 </div>
                               ))

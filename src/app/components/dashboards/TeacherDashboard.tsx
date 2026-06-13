@@ -80,7 +80,6 @@ export const TeacherDashboard = ({ data }: TeacherDashboardProps) => {
                     <p className="font-medium text-gray-700 dark:text-[#F5F7FF]">{subject.nombre}</p>
                     <p className="text-sm text-gray-500 dark:text-[#B7BDD6]">{subject.codigo} · Semestre {subject.semestre}</p>
                   </div>
-                  <Button size="sm" onClick={() => navigate(`/subjects/${subject.id}`)}>Gestionar</Button>
                 </div>
               ))}
           </CardContent>
