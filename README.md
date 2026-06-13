@@ -8,4 +8,9 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
+
+  ## CI/CD
+
+  - `frontend-ci.yml` runs lint and build for pull requests to `main` and for pushes to `main`.
+  - Production deployment is handled directly by Netlify from the `main` branch.
   
