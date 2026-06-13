@@ -1,0 +1,46 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - dev
+      - staging
+      - qa
+      - "feature/**"
+      - "fix/**"
+      - "hotfix/**"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint and Build Frontend
+    runs-on: ubuntu-latest
+
+    env:
+      VITE_API_URL: https://edu-tech-backend-2wgu.onrender.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint project
+        run: npm run lint
+
+      - name: Build project
+        run: npm run build
