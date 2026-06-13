@@ -20,10 +20,23 @@ import { RoomsManagementPage } from "./pages/RoomsManagementPage";
 import { AdminReservationsPage } from "./pages/AdminReservationsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ParticipantsPage } from "./pages/ParticipantsPage";
+import { ParticipantsAdminPage } from "./pages/ParticipantsAdminPage";
+import { getStoredAppUser, isParticipantsAdmin } from "./utils/participants-admin";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("accessToken");
   if (!token) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem("accessToken");
+  const user = getStoredAppUser();
+
+  if (!token || !user) return <Navigate to="/" replace />;
+  if (!isParticipantsAdmin(user)) return <Navigate to="/participants" replace />;
+
   return <>{children}</>;
 };
 
@@ -33,6 +46,8 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       { index: true, Component: LoginPage },
+      { path: "participants", Component: ParticipantsPage },
+      { path: "participants/admin", element: <AdminRoute><ParticipantsAdminPage /></AdminRoute> },
       { path: "register", Component: RegisterPage },
       { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
       { path: "library", element: <ProtectedRoute><LibraryCatalogPage /></ProtectedRoute> },

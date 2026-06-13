@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Eye, EyeOff, ArrowRight, Sun, Moon } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Sun, Moon, Users } from "lucide-react";
 import { FaGraduationCap } from "react-icons/fa6";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { getStoredAppUser, isParticipantsAdmin } from "../utils/participants-admin";
 
 export const LoginPage = () => {
   const [correo, setCorreo] = useState("");
@@ -21,7 +22,8 @@ export const LoginPage = () => {
     try {
       await login(correo, password);
       toast.success("¡Bienvenido!");
-      navigate("/dashboard");
+      const user = getStoredAppUser();
+      navigate(isParticipantsAdmin(user) ? "/participants/admin" : "/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Credenciales inválidas");
     } finally {
@@ -109,6 +111,15 @@ export const LoginPage = () => {
           aria-label="Cambiar tema"
         >
           {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/participants")}
+          className="absolute left-[4.7rem] top-5 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+        >
+          <Users size={15} />
+          Participantes
         </button>
 
         <div className="w-full max-w-[380px] rounded-2xl bg-[#F4F4F8] px-8 py-8 dark:bg-[#202445]">

@@ -20,7 +20,7 @@ export const authApi = {
     carrera: BookCategory;
   }) => {
     try {
-      const response = await apiClient.post("/users", data);
+      const response = await apiClient.post("/users/register", data);
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error, "Error al crear la cuenta"));
